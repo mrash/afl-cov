@@ -25,6 +25,8 @@
 #  USA
 #
 
+from shutil import rmtree
+import glob
 import argparse
 import sys, os
 
@@ -38,17 +40,59 @@ def main():
     if not validate_args(args):
         return exit_failure
 
-    afl_fuzzing_dir = args.afl_fuzzing_dir
+    afl_files = import_dir(args.afl_fuzzing_dir + '/queue')
+
+    print "[+] Imported %d files from: %s" % (len(afl_files),
+            (args.afl_fuzzing_dir + '/queue'))
+
+    for f in afl_files:
+        print os.path.basename(f)
 
     return exit_success
 
+def import_dir(qdir):
+    return sorted(glob.glob(qdir + "/id:*"))
+
 def validate_args(args):
-    if not args.afl_fuzzing_dir:
-        print "[*] Must specify the --afl-fuzzing-dir directory"
+
+    if not args.afl_fuzzing_dir and not args.afl_queue_dir:
+        print "[*] Must specify either --afl-fuzzing-dir or --afl-queue-dir"
         return 0
 
     if not os.path.exists(args.afl_fuzzing_dir):
-        print "[*] It doesn't look like directory '%s' exists" % args.afl_fuzzing_dir
+        print "[*] It doesn't look like directory '%s' exists" \
+                % args.afl_fuzzing_dir
+        return 0
+
+    if not os.path.exists(args.afl_fuzzing_dir + '/queue'):
+        print "[*] '%s' does not exist, is this an AFL directory?" \
+                % (args.afl_fuzzing_dir + '/queue')
+        return 0
+
+    if os.path.exists(args.afl_fuzzing_dir + '/cov'):
+        if args.overwrite:
+            if args.coverage_diff:
+                print "[*] --overwrite and --coverage-diff are incompatible"
+                return 0
+            rmtree(args.afl_fuzzing_dir + '/cov')
+        else:
+            if not args.coverage_diff:
+                print "[*] Existing coverage dir found, Use --overwrite to re-calculate coverage"
+                return 0
+    else:
+        if args.coverage_diff:
+            print "[*] --coverage-diff mode requires a previous afl-cov run"
+            return 0
+        os.mkdir(args.afl_fuzzing_dir + '/cov')
+        os.mkdir(args.afl_fuzzing_dir + '/cov/web')
+        os.mkdir(args.afl_fuzzing_dir + '/cov/lcov')
+        os.mkdir(args.afl_fuzzing_dir + '/cov/diff')
+
+    if args.coverage_diff and args.coverage_cmd:
+        print "[*] --coverage-cmd and --coverage-diff are incompatible"
+
+    if not args.coverage_diff and not args.coverage_cmd:
+        print "[*] Must set --coverage-cmd unless running in --coverage-diff mode"
         return 0
 
     return 1
@@ -57,8 +101,17 @@ def handle_cmdline():
 
     p = argparse.ArgumentParser()
 
-    p.add_argument("-d", "--afl-fuzzing-dir", type=str, help="AFL fuzzing directory")
-    p.add_argument("-v", "--verbose", action='store_true', help="Verbose mode", default=False)
+    p.add_argument("-e", "--coverage-cmd", type=str,
+            help="Set command to exec (including args, and assumes code coverage support)")
+    p.add_argument("-d", "--afl-fuzzing-dir", type=str,
+            help="Top level AFL fuzzing directory")
+    p.add_argument("-O", "--overwrite", action='store_true',
+            help="Overwrite existing coverage results", default=False)
+    p.add_argument("--coverage-diff", action='store_true',
+            help="Display code coverage diffs from a previous afl-cov run",
+            default=False)
+    p.add_argument("-v", "--verbose", action='store_true',
+            help="Verbose mode", default=False)
 
     return p.parse_args()
 
