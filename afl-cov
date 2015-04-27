@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+#
+#  File: afl-cov
+#
+#  Purpose: Perform lcov coverage diff's against each AFL queue file to see
+#           new functions and line coverage evolve from an AFL fuzzing cycle.
+#
+#  Copyright (C) 2015 Michael Rash (mbr@cipherdyne.org)
+#
+#  License (GNU General Public License):
+#
+#  This program is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation; either version 2
+#  of the License, or (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
+#  USA
+#
+
+import argparse
+import sys, os
+
+def main():
+
+    exit_failure = 1
+    exit_success = 0
+
+    args = handle_cmdline()
+
+    if not validate_args(args):
+        return exit_failure
+
+    afl_fuzzing_dir = args.afl_fuzzing_dir
+
+    return exit_success
+
+def validate_args(args):
+    if not args.afl_fuzzing_dir:
+        print "[*] Must specify the --afl-fuzzing-dir directory"
+        return 0
+
+    if not os.path.exists(args.afl_fuzzing_dir):
+        print "[*] It doesn't look like directory '%s' exists" % args.afl_fuzzing_dir
+        return 0
+
+    return 1
+
+def handle_cmdline():
+
+    p = argparse.ArgumentParser()
+
+    p.add_argument("-d", "--afl-fuzzing-dir", type=str, help="AFL fuzzing directory")
+    p.add_argument("-v", "--verbose", action='store_true', help="Verbose mode", default=False)
+
+    return p.parse_args()
+
+if __name__ == "__main__":
+    sys.exit(main())
