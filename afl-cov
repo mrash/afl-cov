@@ -26,6 +26,7 @@
 #
 
 from shutil import rmtree
+import subprocess
 import glob
 import argparse
 import sys, os
@@ -45,10 +46,50 @@ def main():
     print "[+] Imported %d files from: %s" % (len(afl_files),
             (args.afl_fuzzing_dir + '/queue'))
 
+    FNULL = open(os.devnull, 'w')
+
     for f in afl_files:
+        basename  = os.path.basename(f)
+        dirname   = os.path.dirname(f)
+
         print os.path.basename(f)
+        print os.path.dirname(f)
+
+        if (args.coverage_cmd):
+            cmd = args.coverage_cmd.replace('AFL_FILE', f)
+
+            fh = FNULL
+            if args.disable_cmd_redirection:
+                fh = None
+
+            ### execute the command to generate code coverage stats
+            ### for the current AFL file
+            print cmd
+            subprocess.call(cmd, stdin=None,
+                    stdout=fh, stderr=subprocess.STDOUT, shell=True)
+
+            ### collect the code coverage stats
+            generate_coverage(args, f)
+
+            ### diff to the previous code coverage and look for
+            ### new lines/functions
+
+        break
+
+    FNULL.close()
 
     return exit_success
+
+def generate_coverage(args, f):
+    basename  = os.path.basename(f)
+    dirname   = os.path.dirname(f)
+
+    lcov_file = dirname + '/cov/lcov/' + basename + '.lcov'
+
+    lcov_cmd = "lcov --rc lcov_branch_coverage=1 " \
+            + "--no-checksum --capture --directory " \
+            + args.code_dir + " --output-file " + lcov_file
+    return
 
 def import_dir(qdir):
     return sorted(glob.glob(qdir + "/id:*"))
@@ -95,6 +136,19 @@ def validate_args(args):
         print "[*] Must set --coverage-cmd unless running in --coverage-diff mode"
         return 0
 
+    if args.coverage_cmd and 'AFL_FILE' not in args.coverage_cmd:
+        print "[*] --coverage-cmd must contain AFL_FILE"
+        return 0
+
+    if args.code_dir:
+        if not os.path.exists(args.code_dir):
+            print "[*] --code-dir path does not exist"
+            return 0
+    else:
+        if not args.coverage_diff:
+            print "[*] Must set --code-dir unless running in --coverage-diff mode"
+            return 0
+
     return 1
 
 def handle_cmdline():
@@ -105,8 +159,13 @@ def handle_cmdline():
             help="Set command to exec (including args, and assumes code coverage support)")
     p.add_argument("-d", "--afl-fuzzing-dir", type=str,
             help="Top level AFL fuzzing directory")
+    p.add_argument("-c", "--code-dir", type=str,
+            help="Directory where the code lives (compiled with code coverage support)")
     p.add_argument("-O", "--overwrite", action='store_true',
             help="Overwrite existing coverage results", default=False)
+    p.add_argument("--disable-cmd-redirection", action='store_true',
+            help="Disable redirection of command results to /dev/null",
+            default=False)
     p.add_argument("--coverage-diff", action='store_true',
             help="Display code coverage diffs from a previous afl-cov run",
             default=False)
