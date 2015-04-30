@@ -55,8 +55,8 @@ def main():
 
     for f in afl_files:
         if cargs.verbose or not cargs.quiet:
-            print "\n[+] AFL File: %s (%d / %d)" \
-                    % (f, file_num, tot_files)
+            print "\n[+] AFL file: %s (%d / %d)" \
+                    % (os.path.basename(f), file_num, tot_files)
 
         files = gen_paths(cargs, prev_file, f)
 
