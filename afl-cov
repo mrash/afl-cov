@@ -36,6 +36,7 @@ def main():
 
     exit_failure = 1
     exit_success = 0
+    found        = 0
 
     cargs = handle_cmdline()
 
@@ -45,14 +46,15 @@ def main():
     afl_files = import_dir(cargs.afl_fuzzing_dir + '/queue')
     tot_files = len(afl_files)
 
-    print "[+] Imported %d files from: %s" \
-            % (tot_files, (cargs.afl_fuzzing_dir + '/queue'))
+    if cargs.verbose or not cargs.quiet:
+        print "[+] Imported %d files from: %s" \
+                % (tot_files, (cargs.afl_fuzzing_dir + '/queue'))
 
     file_num  = 1
     prev_file = ''
 
     for f in afl_files:
-        if cargs.verbose:
+        if cargs.verbose or not cargs.quiet:
             print "\n[+] AFL File: %s (%d / %d)" \
                     % (f, file_num, tot_files)
 
@@ -70,37 +72,73 @@ def main():
             ### diff to the previous code coverage and look for
             ### new lines/functions
             if file_num > 1:
-                coverage_diff(cargs, files, prev_file, f)
+                found = coverage_diff(cargs, files, prev_file, f)
+                if found:
+                    if cargs.func_search:
+                        print "[+] Function '%s' executed by: %s" \
+                                % (cargs.func_search, os.path.basename(f))
+                        break
+                    elif cargs.line_search:
+                        print "[+] Line '%s' executed by: %s" \
+                                % (cargs.line_search, os.path.basename(f))
+                        break
 
         prev_file = f
         file_num += 1
 
+    if cargs.verbose or not cargs.quiet:
+        print "[+] Processed %d / %d files" % (file_num-1, tot_files)
+
+    if not found:
+        if cargs.func_search:
+            print "[-] Function '%s' not found..." % cargs.func_search
+        elif cargs.line_search:
+            print "[-] Line %s not found..." % cargs.line_search
+
     return exit_success
 
-def coverage_diff(cargs, files, f1, f2):
-    print "[+] Coverage diff %s %s" \
-            % (os.path.basename(f1), os.path.basename(f2))
+def coverage_diff(cargs, files, a, b):
 
-    old_zero_coverage = extract_zero_coverage(files['prev_lcov_info_final'])
-    new_zero_coverage = extract_zero_coverage(files['lcov_info_final'])
+    if cargs.verbose or not cargs.quiet:
+        print "[+] Coverage diff %s %s" \
+                % (os.path.basename(a), os.path.basename(b))
+
+    old_coverage = extract_coverage(files['prev_lcov_info_final'])
+    new_coverage = extract_coverage(files['lcov_info_final'])
 
     ### diff the two dictionaries
-    for f in old_zero_coverage:
+    for f in old_coverage:
         printed_file = 0
-        if f in new_zero_coverage:
-            for ctype in old_zero_coverage[f]:
-                for val in sorted(old_zero_coverage[f][ctype]):
-                    if val not in new_zero_coverage[f][ctype]:
+        if f in new_coverage:
+            for ctype in old_coverage[f]:
+                for val in sorted(old_coverage[f][ctype]):
+                    if val not in new_coverage[f][ctype]:
                         if not printed_file:
-                            print "    Src file: " + f
+                            if cargs.verbose or not cargs.quiet:
+                                print "    Src file: " + f
                             printed_file = 1
-                        print "      New '" + ctype + "' coverage: " + val
+                        if cargs.verbose or not cargs.quiet:
+                            print "      New '" + ctype + "' coverage: " + val
+                        if ctype == 'function':
+                            if cargs.func_search and cargs.func_search == val:
+                                if cargs.src_file:
+                                    if cargs.src_file == f:
+                                        return 1
+                                else:
+                                    return 1
+                        elif ctype == 'line':
+                            if cargs.line_search and cargs.line_search == val:
+                                if cargs.src_file:
+                                    if cargs.src_file == f:
+                                        return 1
+                                else:
+                                    return 1
 
-    return
+    return 0
 
-def extract_zero_coverage(lcov_file):
+def extract_coverage(lcov_file):
 
-    zero_coverage = {}
+    coverage = {}
 
     ### populate old lcov output for functions/lines that were called
     ### zero times
@@ -112,24 +150,24 @@ def extract_zero_coverage(lcov_file):
             m = re.search('SF:(\S+)', line)
             if m and m.group(1):
                 current_file = m.group(1)
-                zero_coverage[current_file] = {}
-                zero_coverage[current_file]['fcns'] = {}
-                zero_coverage[current_file]['lines'] = {}
+                coverage[current_file] = {}
+                coverage[current_file]['function'] = {}
+                coverage[current_file]['line'] = {}
                 continue
 
             if current_file:
                 ### look for functions that were never called
                 m = re.search('^FNDA:0,(\S+)', line)
                 if m and m.group(1):
-                    zero_coverage[current_file]['fcns'][m.group(1) + '()'] = ''
+                    coverage[current_file]['function'][m.group(1) + '()'] = ''
                     continue
 
                 ### look for lines that were never called
                 m = re.search('^DA:(\d+),0', line)
                 if m and m.group(1):
-                    zero_coverage[current_file]['lines'][m.group(1)] = ''
+                    coverage[current_file]['line'][m.group(1)] = ''
 
-    return zero_coverage
+    return coverage
 
 def gen_coverage(cargs, files, afl_file):
 
@@ -264,6 +302,13 @@ def validate_args(cargs):
             print "[*] Must set --code-dir unless running in --coverage-diff mode"
             return 0
 
+    if cargs.func_search or cargs.line_search:
+        if not cargs.verbose:
+            cargs.quiet = 1
+        if cargs.line_search and not cargs.src_file:
+            print "[*] Must set --src-file in --line-search mode"
+            return 0
+
     return 1
 
 def handle_cmdline():
@@ -287,8 +332,16 @@ def handle_cmdline():
     p.add_argument("--coverage-diff", action='store_true',
             help="Display code coverage diffs from a previous afl-cov run",
             default=False)
+    p.add_argument("--func-search", type=str,
+            help="Search for coverage of a specific function")
+    p.add_argument("--line-search", type=str,
+            help="Search for coverage of a specific line number (requires --src-file)")
+    p.add_argument("--src-file", type=str,
+            help="Restrict function or line search to a specfic source file")
     p.add_argument("-v", "--verbose", action='store_true',
             help="Verbose mode", default=False)
+    p.add_argument("-q", "--quiet", action='store_true',
+            help="Quiet mode", default=False)
 
     return p.parse_args()
 
