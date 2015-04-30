@@ -76,9 +76,9 @@ def main():
 
             cov_paths = gen_paths(cargs, prev_file, f)
 
-            if cargs.coverage_cmd:
+            if cargs.coverage_cmd and not cargs.coverage_diff_only:
                 ### execute the command to generate code coverage stats
-                ### for the current AFL file
+                ### for the current AFL queue file
                 run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f), \
                         cargs, 0)
 
@@ -197,6 +197,13 @@ def extract_coverage(lcov_file):
 def gen_coverage(cargs, cov_paths, afl_file):
 
     os.mkdir(cov_paths['lcov_web_dir'])
+
+    run_cmd("lcov --rc lcov_branch_coverage=1" \
+            + " --no-checksum --capture --initial" \
+            + " --directory " + cargs.code_dir \
+            + " --output-file " \
+            + cov_paths['lcov_base'], \
+            cargs, 0)
 
     run_cmd("lcov --rc lcov_branch_coverage=1" \
             + " --no-checksum --capture --directory " \
@@ -320,12 +327,15 @@ def validate_args(cargs):
         os.mkdir(cargs.afl_fuzzing_dir + '/cov/lcov')
         os.mkdir(cargs.afl_fuzzing_dir + '/cov/diff')
 
-    if cargs.coverage_diff_only and cargs.coverage_cmd:
-        print "[*] --coverage-cmd and --coverage-diff-only are incompatible"
-
     if not cargs.coverage_diff_only and not cargs.coverage_cmd:
         print "[*] Must set --coverage-cmd unless running in --coverage-diff-only mode"
         return 0
+
+    if not cargs.coverage_diff_only and not cargs.disable_coverage_init:
+        ### reset code coverage counters
+        run_cmd("lcov --rc lcov_branch_coverage=1 " \
+                + "--no-checksum --zerocounters --directory " \
+                + cargs.code_dir, cargs, 0)
 
     if cargs.coverage_cmd and 'AFL_FILE' not in cargs.coverage_cmd:
         print "[*] --coverage-cmd must contain AFL_FILE"
@@ -376,6 +386,9 @@ def handle_cmdline():
             default=False)
     p.add_argument("--disable-coverage-diff", action='store_true',
             help="disable code coverage diff mode",
+            default=False)
+    p.add_argument("--disable-coverage-init", action='store_true',
+            help="disable initialization of code coverage counters at afl-cov startup",
             default=False)
     p.add_argument("--coverage-diff-only", action='store_true',
             help="skip running lcov - just show code coverage diffs from previou afl-cov run",
