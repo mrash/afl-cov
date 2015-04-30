@@ -79,7 +79,8 @@ def main():
             if cargs.coverage_cmd:
                 ### execute the command to generate code coverage stats
                 ### for the current AFL file
-                run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f), cargs)
+                run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f), \
+                        cargs, 0)
 
                 ### collect the code coverage stats
                 gen_coverage(cargs, cov_paths, f)
@@ -201,24 +202,32 @@ def gen_coverage(cargs, cov_paths, afl_file):
             + " --no-checksum --capture --directory " \
             + cargs.code_dir + " --output-file " \
             + cov_paths['lcov_info'], \
-            cargs)
+            cargs, 0)
 
     run_cmd("lcov --rc lcov_branch_coverage=1" \
             + " --no-checksum -a " + cov_paths['lcov_base'] \
             + " -a " + cov_paths['lcov_info'] \
             + " --output-file " + cov_paths['lcov_info_final'], \
-            cargs)
+            cargs, 0)
 
-    run_cmd("lcov --rc lcov_branch_coverage=1" \
+    out = run_cmd("lcov --rc lcov_branch_coverage=1" \
             + " --no-checksum -r " + cov_paths['lcov_info'] \
             + " /usr/include/\*  --output-file " \
-            + cov_paths['lcov_info_final'], cargs)
+            + cov_paths['lcov_info_final'], cargs, 1)
+
+    for line in out.splitlines():
+        if (re.search('^\s+lines\.\..*\:\s', line)):
+            print line
+        elif (re.search('^\s+functions\.\..*\:\s', line)):
+            print line
+        elif (re.search('^\s+branches\.\..*\:\s', line)):
+            print line
 
     if not cargs.disable_lcov_web:
         run_cmd("genhtml --branch-coverage --output-directory " \
                 + cov_paths['lcov_web_dir'] + " " \
                 + cov_paths['lcov_info_final'], \
-                cargs)
+                cargs, 0)
 
     return
 
@@ -246,7 +255,9 @@ def gen_paths(cargs, prev_afl_file, afl_file):
 
     return cov_paths
 
-def run_cmd(cmd, cargs):
+def run_cmd(cmd, cargs, collect):
+
+    out = ''
 
     if cargs.verbose:
         print "    CMD: %s" % cmd
@@ -255,13 +266,16 @@ def run_cmd(cmd, cargs):
     if not cargs.disable_cmd_redirection:
         fh = open(os.devnull, 'w')
 
-    subprocess.call(cmd, stdin=None,
-            stdout=fh, stderr=subprocess.STDOUT, shell=True)
+    if collect:
+        out = subprocess.check_output(cmd.split())
+    else:
+        subprocess.call(cmd, stdin=None,
+                stdout=fh, stderr=subprocess.STDOUT, shell=True)
 
     if not cargs.disable_cmd_redirection:
         fh.close()
 
-    return
+    return out
 
 def import_dir(qdir):
     return sorted(glob.glob(qdir + "/id:*"))
