@@ -30,6 +30,7 @@ import re
 import subprocess
 import glob
 import argparse
+import time
 import sys, os
 
 def main():
@@ -40,6 +41,7 @@ def main():
     afl_files    = []
     prev_file    = ''
     file_num     = 1
+    tot_files    = 0
 
     cargs = handle_cmdline()
 
@@ -47,16 +49,29 @@ def main():
         return exit_failure
 
     while True:
-        afl_files = import_dir(cargs.afl_fuzzing_dir + '/queue')
-        tot_files = len(afl_files)
+
+        new_files = []
+        tmp_files = import_dir(cargs.afl_fuzzing_dir + '/queue')
+
+        for f in tmp_files:
+            if f not in afl_files:
+                afl_files.append(f)
+                new_files.append(f)
+        tot_files += len(new_files)
+
+        if cargs.live:
+            if not len(new_files):
+                print "[-] No new AFL queue files, sleeping for %d seconds" \
+                        % cargs.sleep
+                time.sleep(cargs.sleep)
 
         if cargs.verbose or not cargs.quiet:
             print "[+] Imported %d files from: %s" \
-                    % (tot_files, (cargs.afl_fuzzing_dir + '/queue'))
+                    % (len(new_files), (cargs.afl_fuzzing_dir + '/queue'))
 
-        for f in afl_files:
+        for f in new_files:
             if cargs.verbose or not cargs.quiet:
-                print "\n[+] AFL file: %s (%d / %d)" \
+                print "[+] AFL file: %s (%d / %d)" \
                         % (os.path.basename(f), file_num, tot_files)
 
             cov_paths = gen_paths(cargs, prev_file, f)
@@ -69,7 +84,7 @@ def main():
                 ### collect the code coverage stats
                 gen_coverage(cargs, cov_paths, f)
 
-            if cargs.coverage_diff:
+            if not cargs.disable_coverage_diff:
                 ### diff to the previous code coverage and look for
                 ### new lines/functions
                 if file_num > 1:
@@ -253,34 +268,34 @@ def import_dir(qdir):
 
 def validate_args(cargs):
 
-    if not cargs.afl_fuzzing_dir and not cargs.afl_queue_dir:
-        print "[*] Must specify either --afl-fuzzing-dir or --afl-queue-dir"
+    if not cargs.afl_fuzzing_dir:
+        print "[*] Must specify either --afl-fuzzing-dir"
         return 0
 
-    if not os.path.exists(cargs.afl_fuzzing_dir):
-        print "[*] It doesn't look like directory '%s' exists" \
-                % cargs.afl_fuzzing_dir
-        return 0
-
-    if not os.path.exists(cargs.afl_fuzzing_dir + '/queue'):
-        print "[*] '%s' does not exist, is this an AFL directory?" \
+    if cargs.live:
+        while not fuzzing_dir_exists(cargs):
+            print "[-] Sleep for %d seconds for AFL fuzzing directory to be created..." \
+                    % cargs.sleep
+            time.sleep(cargs.sleep)
+    else:
+        if not fuzzing_dir_exists(cargs):
+            print "[*] It doesn't look like directory '%s' exists" \
                 % (cargs.afl_fuzzing_dir + '/queue')
-        return 0
 
     create_cov_dirs = 0
     if os.path.exists(cargs.afl_fuzzing_dir + '/cov'):
         if cargs.overwrite:
-            if cargs.coverage_diff:
+            if cargs.coverage_diff_only:
                 print "[*] --overwrite and --coverage-diff are incompatible"
                 return 0
             rmtree(cargs.afl_fuzzing_dir + '/cov')
             create_cov_dirs = 1
         else:
-            if not cargs.coverage_diff:
-                print "[*] Existing coverage dir found, Use --overwrite to re-calculate coverage"
+            if not cargs.coverage_diff_only:
+                print "[*] Existing coverage dir found, use --overwrite to re-calculate coverage"
                 return 0
     else:
-        if cargs.coverage_diff:
+        if cargs.coverage_diff_only:
             print "[*] --coverage-diff mode requires a previous afl-cov run"
             return 0
         create_cov_dirs = 1
@@ -291,11 +306,11 @@ def validate_args(cargs):
         os.mkdir(cargs.afl_fuzzing_dir + '/cov/lcov')
         os.mkdir(cargs.afl_fuzzing_dir + '/cov/diff')
 
-    if cargs.coverage_diff and cargs.coverage_cmd:
-        print "[*] --coverage-cmd and --coverage-diff are incompatible"
+    if cargs.coverage_diff_only and cargs.coverage_cmd:
+        print "[*] --coverage-cmd and --coverage-diff-only are incompatible"
 
-    if not cargs.coverage_diff and not cargs.coverage_cmd:
-        print "[*] Must set --coverage-cmd unless running in --coverage-diff mode"
+    if not cargs.coverage_diff_only and not cargs.coverage_cmd:
+        print "[*] Must set --coverage-cmd unless running in --coverage-diff-only mode"
         return 0
 
     if cargs.coverage_cmd and 'AFL_FILE' not in cargs.coverage_cmd:
@@ -307,8 +322,8 @@ def validate_args(cargs):
             print "[*] --code-dir path does not exist"
             return 0
     else:
-        if not cargs.coverage_diff:
-            print "[*] Must set --code-dir unless running in --coverage-diff mode"
+        if not cargs.coverage_diff_only:
+            print "[*] Must set --code-dir unless running in --coverage-diff-only mode"
             return 0
 
     if cargs.func_search or cargs.line_search:
@@ -318,6 +333,13 @@ def validate_args(cargs):
             print "[*] Must set --src-file in --line-search mode"
             return 0
 
+    return 1
+
+def fuzzing_dir_exists(cargs):
+    if not os.path.exists(cargs.afl_fuzzing_dir):
+        return 0
+    if not os.path.exists(cargs.afl_fuzzing_dir + '/queue'):
+        return 0
     return 1
 
 def handle_cmdline():
@@ -338,12 +360,18 @@ def handle_cmdline():
     p.add_argument("--disable-lcov-web", action='store_true',
             help="disable generate of lcov web code coverage reports",
             default=False)
-    p.add_argument("--coverage-diff", action='store_true',
-            help="display code coverage diffs from a previous afl-cov run",
+    p.add_argument("--disable-coverage-diff", action='store_true',
+            help="disable code coverage diff mode",
+            default=False)
+    p.add_argument("--coverage-diff-only", action='store_true',
+            help="skip running lcov - just show code coverage diffs from previou afl-cov run",
             default=False)
     p.add_argument("--live", action='store_true',
             help="process a live AFL directory, stop with Ctrl-C",
             default=False)
+    p.add_argument("--sleep", type=int,
+            help="In --live mode, # of seconds to sleep between checking for new queue files",
+            default=60)
     p.add_argument("--func-search", type=str,
             help="search for coverage of a specific function")
     p.add_argument("--line-search", type=str,
