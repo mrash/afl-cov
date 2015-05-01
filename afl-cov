@@ -2,6 +2,8 @@
 #
 #  File: afl-cov
 #
+#  Version: 0.1
+#
 #  Purpose: Perform lcov coverage diff's against each AFL queue file to see
 #           new functions and line coverage evolve from an AFL fuzzing cycle.
 #
@@ -35,6 +37,7 @@ import sys, os
 
 def main():
 
+    version      = '0.1'
     exit_failure = 1
     exit_success = 0
     found        = 0
@@ -44,6 +47,10 @@ def main():
     tot_files    = 0
 
     cargs = handle_cmdline()
+
+    if cargs.version:
+        print "afl-cov-" + version
+        return exit_success
 
     if not validate_args(cargs):
         return exit_failure
@@ -407,6 +414,8 @@ def handle_cmdline():
             help="restrict function or line search to a specfic source file")
     p.add_argument("-v", "--verbose", action='store_true',
             help="verbose mode", default=False)
+    p.add_argument("-V", "--version", action='store_true',
+            help="print version and exit", default=False)
     p.add_argument("-q", "--quiet", action='store_true',
             help="quiet mode", default=False)
 
