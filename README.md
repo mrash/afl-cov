@@ -3,14 +3,36 @@
 ## Introduction
 `afl-cov` uses test case files produced by the AFL fuzzer (see:
 [http://lcamtuf.coredump.cx/afl/](http://lcamtuf.coredump.cx/afl/) to produce
-gcov/lcov code coverage results of the targeted binary. Further, `afl-cov`
-interprets code coverage results from one test case to the next, and
-automatically produces stats on new lines and functions that are hit by newer
-test cases. Also, `afl-cov` allows for specific lines or functions to be
-searched for within coverage results, and when a match is found the
-corresponding test case file is displayed.
+gcov/lcov code coverage results of the targeted binary. Code coverage is
+interpreted from one case to the next by `afl-cov` in order to determine which
+new functions and lines are hit by AFL with new test cases. Further, `afl-cov`
+allows for specific lines or functions to be searched for within coverage
+results, and when a match is found the corresponding test case file is
+displayed. This allows the user to discover which AFL test case is the first to
+exercise a particular function.
 
-/home/mbr/bin/afl-cov -d /tmp/afl-ramdisk/fwknop.git/test/afl/fuzzing-output/spa-pkts.out --live --coverage-cmd "cat AFL_FILE | LD_LIBRARY_PATH=./lib/.libs ./server/.libs/fwknopd -c ./test/conf/default_fwknopd.conf -a ./test/conf/default_access.conf -A -f -t" --code-dir . -v
+Although `afl-cov` is of no use to AFL itself, the main application of
+`afl-cov` is to help wrap some automation around gcov and thereby provide data
+on how to maximize code coverage with AFL. Manual interpretation of cumulative
+gcov results from AFL test cases is usually still required, but the first
+"fiddly" step of iterating over all test cases and generating code coverage
+reports is solved by `afl-cov`.
+
+Producing code coverage reports for AFL test cases is an important step to try
+and maximize code coverage. For example, some binaries have code that is
+reachable only after a complicated (or even cryptographic) test is passed, and
+AFL may not be able to exercise such code without taking special measures. For
+example, a patch to solve this problem for CRC test in libpng, see the
+`experimental/libpng_no_checksum/libpng-nocrc.patch` file in the AFL sources.
+So, the results produced by `afl-cov` can help to verify whether such measures
+are effective.
+
+## Work Flow
+The general work flow for `afl-cov` is:
+
+1) Compile...
+
+$ afl-cov -d /tmp/afl-ramdisk/fwknop.git/test/afl/fuzzing-output/spa-pkts.out --live --coverage-cmd "cat AFL_FILE | LD_LIBRARY_PATH=./lib/.libs ./server/.libs/fwknopd -c ./test/conf/default_fwknopd.conf -a ./test/conf/default_access.conf -A -f -t" --code-dir . -v
 
 ## Usage Information
 Basic `--help` output appears below:
