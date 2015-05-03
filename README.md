@@ -5,9 +5,9 @@
 [http://lcamtuf.coredump.cx/afl/](http://lcamtuf.coredump.cx/afl/) to produce
 gcov/lcov code coverage results of the targeted binary. Code coverage is
 interpreted from one case to the next by `afl-cov` in order to determine which
-new functions and lines are hit by AFL with new test cases. Further, `afl-cov`
-allows for specific lines or functions to be searched for within coverage
-results, and when a match is found the corresponding test case file is
+new functions and lines are hit by AFL with each new test case. Further,
+`afl-cov` allows for specific lines or functions to be searched for within
+coverage results, and when a match is found the corresponding test case file is
 displayed. This allows the user to discover which AFL test case is the first to
 exercise a particular function. In addition, `afl-cov` produces a "zero
 coverage" report of functions and lines that were never executed during an AFL
@@ -65,18 +65,69 @@ is fuzzing the targeted binary via stdin. This explains the
 fuzzing with AFL where a file is read from the filesystem, here is an example:
 
 $ cd /path/to/project-gcov/
-$ afl-cov -d /path/to/afl-fuzz-output/dir/ --live --coverage-cmd "LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f AFL_FILE -a -b -c" --code-dir .
+$ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd "LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f AFL_FILE -a -b -c" --code-dir .
 
 3) With `afl-cov` running, open a separate terminal/shell, and launch
 `afl-fuzz`:
 
 $ cd /path/to/project-fuzzing/
-$ LD_LIBRARY_PATH=./lib/.libs afl-fuzz -t 1000 -i ./test-cases/ -o /path/to/afl-fuzz-output/dir/ ./bin/.libs/somebin -a -b -c"
+$ LD_LIBRARY_PATH=./lib/.libs afl-fuzz -T somebin -t 1000 -i ./test-cases/ -o /path/to/afl-fuzz-output/dir/ ./bin/.libs/somebin -a -b -c"
 
 The familiar AFL status screen will be displayed, and `afl-cov` will start
 generating code coverage data.
 
-## Example Output
+![alt text][AFL-status-screen]
+
+[AFL-status-screen]: https://github.com/mrash/afl-cov/raw/master/doc/AFL_status_screen.png "AFL Fuzzing Cycle"
+
+Here is a sample of what the `afl-cov` output looks like:
+
+[+] Imported 184 files from: /path/to/afl-fuzz-output/queue
+[+] AFL file: id:000000,orig:somestr.start (1 / 184)
+    lines......: 18.6% (1122 of 6032 lines)
+    functions..: 30.7% (100 of 326 functions)
+    branches...: 14.0% (570 of 4065 branches)
+[+] AFL file: id:000001,orig:somestr256.start (2 / 184)
+    lines......: 18.7% (1127 of 6032 lines)
+    functions..: 30.7% (100 of 326 functions)
+    branches...: 14.1% (572 of 4065 branches)
+[+] Coverage diff id:000000,orig:somestr.start id:000001,orig:somestr256.start
+    Src file: /path/to/project-gcov/lib/proj_decode.c
+      New 'line' coverage: 140
+      New 'line' coverage: 141
+      New 'line' coverage: 142
+    Src file: /path/to/project-gcov/lib/proj_util.c
+      New 'line' coverage: 217
+      New 'line' coverage: 218
+[+] AFL file: id:000002,orig:somestr384.start (3 / 184)
+    lines......: 18.8% (1132 of 6032 lines)
+    functions..: 30.7% (100 of 326 functions)
+    branches...: 14.1% (574 of 4065 branches)
+[+] Coverage diff id:000001,orig:somestr256.start id:000002,orig:somestr384.start
+    Src file: /path/to/project-gcov/lib/proj_decode.c
+      New 'line' coverage: 145
+      New 'line' coverage: 146
+      New 'line' coverage: 147
+    Src file: /path/to/project-gcov/lib/proj_util.c
+      New 'line' coverage: 220
+      New 'line' coverage: 221
+[+] AFL file: id:000003,orig:somestr.start (4 / 184)
+    lines......: 18.9% (1141 of 6032 lines)
+    functions..: 31.0% (101 of 326 functions)
+    branches...: 14.3% (581 of 4065 branches)
+[+] Coverage diff id:000002,orig:somestr384.start id:000003,orig:somestr.start
+    Src file: /path/to/project-gcov/lib/proj_message.c
+      New 'function' coverage: validate_cmd_msg()
+      New 'line' coverage: 244
+      New 'line' coverage: 247
+      New 'line' coverage: 248
+      New 'line' coverage: 250
+      New 'line' coverage: 255
+      New 'line' coverage: 262
+      New 'line' coverage: 263
+      New 'line' coverage: 266
+
+## Directory Structure
 
 ## Usage Information
 Basic `--help` output appears below:
