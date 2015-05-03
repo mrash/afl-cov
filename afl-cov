@@ -128,6 +128,16 @@ def coverage_diff(cargs, cov_paths, a, b):
     old_coverage = extract_coverage(cov_paths['prev_lcov_info_final'])
     new_coverage = extract_coverage(cov_paths['lcov_info_final'])
 
+    ### write out the zero coverage result for the current
+    ### file
+    cfile = open(cov_paths['zero_cov'], 'w')
+    for f in new_coverage:
+        cfile.write("[+] File: %s\n" % f)
+        for ctype in new_coverage[f]:
+            for val in sorted(new_coverage[f][ctype]):
+                cfile.write("    %s: %s\n" % (ctype, val))
+    cfile.close()
+
     ### diff the two dictionaries
     for f in old_coverage:
         printed_file = 0
@@ -137,33 +147,36 @@ def coverage_diff(cargs, cov_paths, a, b):
                     if val not in new_coverage[f][ctype]:
                         if not printed_file:
                             if cargs.verbose or not cargs.quiet:
-                                print "    Src file: " + f
+                                tee_print("    Src file: " + f, cov_paths['diff'])
                             printed_file = 1
                         if cargs.verbose or not cargs.quiet:
-                            print "      New '" + ctype + "' coverage: " + val
+                            tee_print("      New '" + ctype + "' coverage: " + val,
+                                    cov_paths['diff'])
                         if ctype == 'function':
                             if cargs.func_search and cargs.func_search == val:
                                 if cargs.src_file:
                                     if cargs.src_file == f:
-                                        print "[+] Function '%s' in file: '%s' executed by: %s" \
+                                        tee_print("[+] Function '%s' in file: '%s' executed by: %s" \
                                             % (cargs.func_search, cargs.src_file, \
-                                            os.path.basename(b))
+                                            os.path.basename(b)), cov_paths['diff'])
                                         return 1
                                 else:
-                                    print "[+] Function '%s' executed by: %s" \
-                                        % (cargs.func_search, os.path.basename(b))
+                                    tee_print("[+] Function '%s' executed by: %s" \
+                                        % (cargs.func_search, os.path.basename(b)),
+                                        cov_paths['diff'])
                                     return 1
                         elif ctype == 'line':
                             if cargs.line_search and cargs.line_search == val:
                                 if cargs.src_file:
                                     if cargs.src_file == f:
-                                        print "[+] Line '%s' in file: '%s' executed by: %s" \
+                                        tee_print("[+] Line '%s' in file: '%s' executed by: %s" \
                                             % (cargs.line_search, cargs.src_file, \
-                                            os.path.basename(b))
+                                            os.path.basename(b)), cov_paths['diff'])
                                         return 1
                                 else:
-                                    print "[+] Line '%s' executed by: %s" \
-                                        % (cargs.line_search, os.path.basename(b))
+                                    tee_print("[+] Line '%s' executed by: %s" \
+                                        % (cargs.line_search, os.path.basename(b)),
+                                        cov_paths['diff'])
                                     return 1
 
     return 0
@@ -258,6 +271,8 @@ def gen_paths(cargs, prev_afl_file, afl_file):
 
     cov_paths['diff'] = cargs.afl_fuzzing_dir + '/cov/diff/' \
             + basename + '.cov_diff'
+    cov_paths['zero_cov'] = cargs.afl_fuzzing_dir + '/cov/zero-cov/' \
+            + basename + '.zero_cov'
     cov_paths['lcov_web_dir'] = cargs.afl_fuzzing_dir + '/cov/web/' \
             + basename
     cov_paths['lcov_base'] = cargs.afl_fuzzing_dir + '/cov/lcov/' \
@@ -337,6 +352,7 @@ def validate_args(cargs):
         os.mkdir(cargs.afl_fuzzing_dir + '/cov')
         os.mkdir(cargs.afl_fuzzing_dir + '/cov/web')
         os.mkdir(cargs.afl_fuzzing_dir + '/cov/lcov')
+        os.mkdir(cargs.afl_fuzzing_dir + '/cov/zero-cov')
         os.mkdir(cargs.afl_fuzzing_dir + '/cov/diff')
 
     if not cargs.coverage_diff_only and not cargs.coverage_cmd:
@@ -377,6 +393,13 @@ def fuzzing_dir_exists(cargs):
     if not os.path.exists(cargs.afl_fuzzing_dir + '/queue'):
         return 0
     return 1
+
+def tee_print(pstr, pfile):
+    print pstr
+    f = open(pfile, 'a')
+    f.write("%s\n" % pstr)
+    f.close()
+    return
 
 def handle_cmdline():
 
