@@ -230,12 +230,17 @@ def gen_coverage(cargs, cov_paths, afl_file):
             + cov_paths['lcov_info_final'], cargs, 1)
 
     for line in out.splitlines():
-        if (re.search('^\s+lines\.\..*\:\s', line)):
-            print line
-        elif (re.search('^\s+functions\.\..*\:\s', line)):
-            print line
-        elif (re.search('^\s+branches\.\..*\:\s', line)):
-            print line
+        m = re.search('^\s+(lines\.\..*\:\s.*)', line)
+        if m and m.group(1):
+            print "    " + m.group(1)
+        else:
+            m = re.search('^\s+(functions\.\..*\:\s.*)', line)
+            if m and m.group(1):
+                print "    " + m.group(1)
+            else:
+                m = re.search('^\s+(branches\.\..*\:\s.*)', line)
+                if m and m.group(1):
+                    print "    " + m.group(1)
 
     if not cargs.disable_lcov_web:
         run_cmd("genhtml --branch-coverage --output-directory " \
