@@ -13,28 +13,38 @@ exercise a particular function. In addition, `afl-cov` produces a "zero
 coverage" report of functions and lines that were never executed during an AFL
 fuzzing run.
 
-Although `afl-cov` is of no use to AFL itself, the main application of
-`afl-cov` is to help wrap some automation around gcov and thereby provide data
-on how to maximize code coverage with AFL. Manual interpretation of cumulative
-gcov results from AFL test cases is usually still required, but the first
-"fiddly" step of iterating over all test cases and generating code coverage
-reports (along with the "zero coverage" report) is solved by `afl-cov`.
+Although of no use to AFL itself, the main application of `afl-cov` is to wrap
+some automation around gcov and thereby provide data on how to maximize code
+coverage with AFL fuzzing runs. Manual interpretation of cumulative gcov
+results from AFL test cases is usually still required, but the "fiddly" steps
+of iterating over all test cases and generating code coverage reports (along
+with the "zero coverage" report) is automated by `afl-cov`.
 
-Producing code coverage reports for AFL test cases is an important step to try
+Producing code coverage data for AFL test cases is an important step to try
 and maximize code coverage, and thereby help to maximize the effectiveness of
 AFL. For example, some binaries have code that is reachable only after a
 complicated (or even cryptographic) test is passed, and AFL may not be able to
-exercise such code without taking special measures. For example, a patch to
-solve this problem for CRC test in libpng, see the
-`experimental/libpng_no_checksum/libpng-nocrc.patch` file in the AFL sources.
-Code coverage results can help to verify whether such measures are effective.
+exercise this code without taking special measures. These measures commonly
+include patching the project code to bypass such tests. (For example, there is
+a patch to solve this problem for a CRC test in libpng included in the AFL
+sources at `experimental/libpng_no_checksum/libpng-nocrc.patch`.)
+When a project implements a patch to assist AFL in reaching code that would
+otherwise be inaccessible, a natural question to ask is whether the patch is
+effective. Code coverage results can help to verify this.
 
 ## Work Flow
-The general work flow for `afl-cov` is:
+The general workflow for `afl-cov` is:
 
-1) Compile the targeted project with 
+1) Copy the project sources to two different directories
+`/path/to/src/project-fuzzing/` and `/path/to/src/project-gcov/`. The first
+will contain the project binaries compiled for AFL fuzzing, and the second will
+contain the project binaries compiled for gcov profiling support. For the
+`/path/to/src/project-gcov/` directory, compile the project with gcov profiling
+support (gcc `-fprofile-arcs -ftest-coverage`).
 
-2) Start up `afl-cov` in `--live` mode
+2) Start up `afl-cov` in `--live` mode before also starting the `afl-fuzz`
+fuzzing cycle. The command line arguments to `afl-cov` must specify the path to
+the output directory used by `afl-fuzz`, and the command to execute..
 
 $ afl-cov -d /tmp/afl-ramdisk/fwknop.git/test/afl/fuzzing-output/spa-pkts.out --live --coverage-cmd "cat AFL_FILE | LD_LIBRARY_PATH=./lib/.libs ./server/.libs/fwknopd -c ./test/conf/default_fwknopd.conf -a ./test/conf/default_access.conf -A -f -t" --code-dir . -v
 
