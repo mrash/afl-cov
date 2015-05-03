@@ -133,9 +133,14 @@ def coverage_diff(cargs, cov_paths, a, b):
     cfile = open(cov_paths['zero_cov'], 'w')
     for f in new_coverage:
         cfile.write("[+] File: %s\n" % f)
-        for ctype in new_coverage[f]:
-            for val in sorted(new_coverage[f][ctype]):
-                cfile.write("    %s: %s\n" % (ctype, val))
+        for ctype in sorted(new_coverage[f]):
+            if ctype == 'function':
+                for val in sorted(new_coverage[f][ctype]):
+                    cfile.write("    %s: %s\n" % (ctype, val))
+            elif ctype == 'line':
+                if cargs.coverage_include_lines:
+                    for val in sorted(new_coverage[f][ctype], key=int):
+                        cfile.write("    %s: %s\n" % (ctype, val))
     cfile.close()
 
     ### diff the two dictionaries
@@ -427,6 +432,9 @@ def handle_cmdline():
             default=False)
     p.add_argument("--coverage-diff-only", action='store_true',
             help="skip running lcov - just show code coverage diffs from previous afl-cov run",
+            default=False)
+    p.add_argument("--coverage-include-lines", action='store_true',
+            help="include lines in zero-coverage status files",
             default=False)
     p.add_argument("--live", action='store_true',
             help="process a live AFL directory, stop with Ctrl-C",
