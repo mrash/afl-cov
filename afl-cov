@@ -43,6 +43,7 @@ def main():
     found        = 0
     afl_files    = []
     prev_file    = ''
+    cov_paths    = {}
     file_num     = 1
     tot_files    = 0
     es           = exit_success
@@ -61,7 +62,6 @@ def main():
         is_final  = 0
         new_files = []
         tmp_files = import_dir(cargs.afl_fuzzing_dir + '/queue')
-        cov_paths = {}
 
         for f in tmp_files:
             if f not in afl_files:
@@ -134,6 +134,9 @@ def main():
         if not cargs.disable_lcov_web:
             if is_final or cargs.lcov_web_all:
                 gen_web_cov_report(cargs, cov_paths, is_final)
+        if is_final:
+            zero_cov_final(cov_paths['zero_cov'],
+            cargs.afl_fuzzing_dir + '/cov/zero-cov/zero-cov-final')
 
     if cargs.verbose or not cargs.quiet:
         print "[+] Processed %d / %d files" % (file_num-1, tot_files)
@@ -160,9 +163,7 @@ def coverage_diff(cargs, cov_paths, a, b, is_final):
     ### write out the zero coverage result for the current
     ### file
     if is_final:
-        print "[+] Final zero coverage report in: %s" \
-                % cargs.afl_fuzzing_dir + '/cov/zero-cov/zero-cov-final'
-        os.symlink(cov_paths['zero_cov'],
+        zero_cov_final(cov_paths['zero_cov'],
                 cargs.afl_fuzzing_dir + '/cov/zero-cov/zero-cov-final')
 
     cfile = open(cov_paths['zero_cov'], 'w')
@@ -220,6 +221,11 @@ def coverage_diff(cargs, cov_paths, a, b, is_final):
                                     return 1
 
     return 0
+
+def zero_cov_final(path, lpath):
+    print "[+] Final zero coverage report in: %s" % lpath
+    os.symlink(path, lpath)
+    return
 
 def extract_coverage(lcov_file):
 
@@ -390,9 +396,10 @@ def validate_args(cargs):
             time.sleep(cargs.sleep)
 
         ### if we make it here then afl-fuzz is presumably running
-        if not is_afl_fuzz_running(cargs):
-            print "[*] Strange, could not detect afl-fuzz running, exiting."
-            return 0
+        while not is_afl_fuzz_running(cargs):
+            print "[-] Sleep for %d seconds waiting for afl-fuzz to be started...." \
+                    % cargs.sleep
+            time.sleep(cargs.sleep)
     else:
         if not fuzzing_dir_exists(cargs):
             print "[*] It doesn't look like directory '%s' exists" \
