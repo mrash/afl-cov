@@ -45,6 +45,7 @@ def main():
     prev_file    = ''
     file_num     = 1
     tot_files    = 0
+    es           = exit_success
 
     cargs = handle_cmdline()
 
@@ -57,9 +58,10 @@ def main():
 
     while True:
 
-        is_last_file = 0
-        new_files    = []
-        tmp_files    = import_dir(cargs.afl_fuzzing_dir + '/queue')
+        is_final  = 0
+        new_files = []
+        tmp_files = import_dir(cargs.afl_fuzzing_dir + '/queue')
+        cov_paths = {}
 
         for f in tmp_files:
             if f not in afl_files:
@@ -68,10 +70,16 @@ def main():
         tot_files += len(new_files)
 
         if cargs.live:
-            if not len(new_files):
-                print "[-] No new AFL queue files, sleeping for %d seconds" \
-                        % cargs.sleep
-                time.sleep(cargs.sleep)
+            if is_afl_fuzz_running(cargs):
+                if not len(new_files):
+                    print "[-] No new AFL queue files, sleeping for %d seconds" \
+                            % cargs.sleep
+                    time.sleep(cargs.sleep)
+                    continue
+            else:
+                print "[+] afl-fuzz appears to be stopped..."
+                is_final = 1
+                break
 
         if cargs.verbose or not cargs.quiet:
             print "[+] Imported %d files from: %s" \
@@ -84,10 +92,10 @@ def main():
 
             if not cargs.live:
                 if file_num == tot_files:
-                    is_last_file = 1
+                    is_final = 1
                 elif cargs.afl_queue_id_limit \
                         and file_num > cargs.afl_queue_id_limit-1:
-                    is_last_file = 1
+                    is_final = 1
 
             cov_paths = gen_paths(cargs, prev_file, f)
 
@@ -98,14 +106,14 @@ def main():
                         cargs, 0)
 
                 ### collect the code coverage stats
-                gen_coverage(cargs, cov_paths, f, is_last_file)
+                gen_coverage(cargs, cov_paths, f, is_final)
 
             if not cargs.disable_coverage_diff:
                 ### diff to the previous code coverage and look for
                 ### new lines/functions
                 if file_num > 1:
                     rv = coverage_diff(cargs, cov_paths,
-                            prev_file, f, is_last_file)
+                            prev_file, f, is_final)
                     if rv:
                         if cargs.func_search or cargs.line_search:
                             found = 1
@@ -122,18 +130,25 @@ def main():
         if not cargs.live:
             break
 
+    if cargs.live:
+        if not cargs.disable_lcov_web:
+            if is_final or cargs.lcov_web_all:
+                gen_web_cov_report(cargs, cov_paths, is_final)
+
     if cargs.verbose or not cargs.quiet:
         print "[+] Processed %d / %d files" % (file_num-1, tot_files)
 
     if not found:
         if cargs.func_search:
             print "[-] Function '%s' not found..." % cargs.func_search
+            es = exit_failure
         elif cargs.line_search:
             print "[-] Line %s not found..." % cargs.line_search
+            es = exit_failure
 
-    return exit_success
+    return es
 
-def coverage_diff(cargs, cov_paths, a, b, is_last_file):
+def coverage_diff(cargs, cov_paths, a, b, is_final):
 
     if cargs.verbose or not cargs.quiet:
         print "[+] Coverage diff %s %s" \
@@ -144,7 +159,7 @@ def coverage_diff(cargs, cov_paths, a, b, is_last_file):
 
     ### write out the zero coverage result for the current
     ### file
-    if is_last_file:
+    if is_final:
         print "[+] Final zero coverage report in: %s" \
                 % cargs.afl_fuzzing_dir + '/cov/zero-cov/zero-cov-final'
         os.symlink(cov_paths['zero_cov'],
@@ -239,7 +254,7 @@ def extract_coverage(lcov_file):
 
     return coverage
 
-def gen_coverage(cargs, cov_paths, afl_file, is_last_file):
+def gen_coverage(cargs, cov_paths, afl_file, is_final):
 
     os.mkdir(cov_paths['lcov_web_dir'])
 
@@ -281,18 +296,35 @@ def gen_coverage(cargs, cov_paths, afl_file, is_last_file):
                     print "    " + m.group(1)
 
     if not cargs.disable_lcov_web:
-        if is_last_file or cargs.lcov_web_all:
-            if is_last_file:
-                print "[+] Generating lcov web report in: %s" \
-                        % cargs.afl_fuzzing_dir + '/cov/web/lcov-web-final'
-                os.symlink(cov_paths['lcov_web_dir'],
-                        cargs.afl_fuzzing_dir + '/cov/web/lcov-web-final')
-            run_cmd("genhtml --branch-coverage --output-directory " \
-                    + cov_paths['lcov_web_dir'] + " " \
-                    + cov_paths['lcov_info_final'], \
-                    cargs, 0)
+        if is_final or cargs.lcov_web_all:
+            gen_web_cov_report(cargs, cov_paths, is_final)
 
     return
+
+def gen_web_cov_report(cargs, cov_paths, is_final):
+    if is_final:
+        print "[+] Generating lcov web report in: %s" \
+                % cargs.afl_fuzzing_dir + '/cov/web/lcov-web-final'
+        os.symlink(cov_paths['lcov_web_dir'],
+                cargs.afl_fuzzing_dir + '/cov/web/lcov-web-final')
+
+    run_cmd("genhtml --branch-coverage --output-directory " \
+            + cov_paths['lcov_web_dir'] + " " \
+            + cov_paths['lcov_info_final'], \
+            cargs, 0)
+    return
+
+def is_afl_fuzz_running(cargs):
+    ### root  12765 10.1  0.2 7336 2616 pts/5   S+  08:45  0:00 afl-fuzz -T ...
+    out = run_cmd("ps auxww", cargs, 1)
+
+    found = 0
+    for line in out.splitlines():
+        if (re.search('\d\:\d{2}\s+afl\-fuzz\s', line)):
+            found = 1
+            break
+
+    return found
 
 def gen_paths(cargs, prev_afl_file, afl_file):
 
@@ -356,10 +388,16 @@ def validate_args(cargs):
             print "[-] Sleep for %d seconds for AFL fuzzing directory to be created..." \
                     % cargs.sleep
             time.sleep(cargs.sleep)
+
+        ### if we make it here then afl-fuzz is presumably running
+        if not is_afl_fuzz_running(cargs):
+            print "[*] Strange, could not detect afl-fuzz running, exiting."
+            return 0
     else:
         if not fuzzing_dir_exists(cargs):
             print "[*] It doesn't look like directory '%s' exists" \
                 % (cargs.afl_fuzzing_dir + '/queue')
+            return 0
 
     create_cov_dirs = 0
     if os.path.exists(cargs.afl_fuzzing_dir + '/cov'):
@@ -390,12 +428,6 @@ def validate_args(cargs):
         print "[*] Must set --coverage-cmd unless running in --coverage-diff-only mode"
         return 0
 
-    if not cargs.coverage_diff_only and not cargs.disable_coverage_init:
-        ### reset code coverage counters
-        run_cmd("lcov --rc lcov_branch_coverage=1 " \
-                + "--no-checksum --zerocounters --directory " \
-                + cargs.code_dir, cargs, 0)
-
     if cargs.coverage_cmd and 'AFL_FILE' not in cargs.coverage_cmd:
         print "[*] --coverage-cmd must contain AFL_FILE"
         return 0
@@ -415,6 +447,12 @@ def validate_args(cargs):
         if cargs.line_search and not cargs.src_file:
             print "[*] Must set --src-file in --line-search mode"
             return 0
+
+    if not cargs.coverage_diff_only and not cargs.disable_coverage_init:
+        ### reset code coverage counters
+        run_cmd("lcov --rc lcov_branch_coverage=1 " \
+                + "--no-checksum --zerocounters --directory " \
+                + cargs.code_dir, cargs, 0)
 
     return 1
 
