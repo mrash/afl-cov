@@ -32,6 +32,13 @@ When a project implements a patch to assist AFL in reaching code that would
 otherwise be inaccessible, a natural question to ask is whether the patch is
 effective. Code coverage results can help to verify this.
 
+## Prerequisites
+`afl-cov` requires the following software:
+
+ * afl-fuzz (or at least a directory created by afl-fuzz from a different system)
+ * python
+ * gcov, lcov, genhtml
+
 ## Work Flow
 The general workflow for `afl-cov` is:
 
