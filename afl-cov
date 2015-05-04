@@ -264,7 +264,7 @@ def gen_coverage(cargs, cov_paths, afl_file, is_last_file):
 
     out = run_cmd("lcov --rc lcov_branch_coverage=1" \
             + " --no-checksum -r " + cov_paths['lcov_info'] \
-            + " /usr/include/\*  --output-file " \
+            + " /usr/include/*  --output-file " \
             + cov_paths['lcov_info_final'], cargs, 1)
 
     for line in out.splitlines():
