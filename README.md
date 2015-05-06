@@ -66,8 +66,12 @@ results, then just omit the `--live` argument to process these results.
 
 Here is an example:
 
+```bash
 $ cd /path/to/project-gcov/
-$ afl-cov -d /path/to/afl-fuzz-output/dir/ --live --coverage-cmd "cat AFL_FILE | LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -a -b -c" --code-dir .
+$ afl-cov -d /path/to/afl-fuzz-output/dir/ --live --coverage-cmd \
+"cat AFL_FILE | LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -a -b -c" \
+--code-dir .
+```
 
 Note the `AFL_FILE` string above refers to the test case file that AFL will
 build in the `queue/` directory under `/path/to/project-fuzz`. Just leave this
@@ -79,14 +83,21 @@ is fuzzing the targeted binary via stdin. This explains the
 `cat AFL_FILE | ... ./bin/.lib/somebin ...` invocation. For the other style of
 fuzzing with AFL where a file is read from the filesystem, here is an example:
 
+```bash
 $ cd /path/to/project-gcov/
-$ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd "LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f AFL_FILE -a -b -c" --code-dir .
+$ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
+"LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f AFL_FILE -a -b -c" \
+--code-dir .
+```
 
 3) With `afl-cov` running, open a separate terminal/shell, and launch
 `afl-fuzz`:
 
+```bash
 $ cd /path/to/project-fuzzing/
-$ LD_LIBRARY_PATH=./lib/.libs afl-fuzz -T somebin -t 1000 -i ./test-cases/ -o /path/to/afl-fuzz-output/dir/ ./bin/.libs/somebin -a -b -c"
+$ LD_LIBRARY_PATH=./lib/.libs afl-fuzz -T somebin -t 1000 -i ./test-cases/ \
+-o /path/to/afl-fuzz-output/dir/ ./bin/.libs/somebin -a -b -c"
+```
 
 The familiar AFL status screen will be displayed, and `afl-cov` will start
 generating code coverage data.
@@ -97,7 +108,9 @@ generating code coverage data.
 
 Here is a sample of what the `afl-cov` output looks like:
 
-$ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd "LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f AFL_FILE -a -b -c" --code-dir .
+```bash
+$ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
+"LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f AFL_FILE -a -b -c" --code-dir .
 [+] Imported 184 files from: /path/to/afl-fuzz-output/queue
 [+] AFL file: id:000000,orig:somestr.start (1 / 184)
     lines......: 18.6% (1122 of 6032 lines)
@@ -149,6 +162,7 @@ $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd "LD_LIBRARY_PATH=./
 [+] Coverage diff id:000182,src:000000,op:havoc,rep:64 id:000184,src:000000,op:havoc,rep:4
 [+] Final zero coverage report in: /path/to/afl-fuzz-output/cov/zero-cov/zero-cov-final
 [+] Processed 184 / 184 files
+```
 
 In the last few lines above, the locations of the final web coverage and zero
 coverage reports are shown. The zero coverage reports contains function names
