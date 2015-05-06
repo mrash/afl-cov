@@ -169,8 +169,7 @@ Basic `--help` output appears below:
 
     usage: afl-cov [-h] [-e COVERAGE_CMD] [-d AFL_FUZZING_DIR] [-c CODE_DIR] [-O]
                [--disable-cmd-redirection] [--disable-lcov-web]
-               [--disable-coverage-diff] [--disable-coverage-init]
-               [--coverage-diff-only] [--coverage-include-lines] [--live]
+               [--disable-coverage-init] [--coverage-include-lines] [--live]
                [--sleep SLEEP] [--lcov-web-all] [--func-search FUNC_SEARCH]
                [--line-search LINE_SEARCH] [--src-file SRC_FILE]
                [--afl-queue-id-limit AFL_QUEUE_ID_LIMIT] [-v] [-V] [-q]
@@ -190,16 +189,13 @@ Basic `--help` output appears below:
                             disable redirection of command results to /dev/null
       --disable-lcov-web    disable generation of all lcov web code coverage
                             reports
-      --disable-coverage-diff
-                            disable code coverage diff mode
       --disable-coverage-init
                             disable initialization of code coverage counters at
                             afl-cov startup
-      --coverage-diff-only  skip running lcov - just show code coverage diffs from
-                            previous afl-cov run
       --coverage-include-lines
                             include lines in zero-coverage status files
-      --live                process a live AFL directory, stop with Ctrl-C
+      --live                process a live AFL directory, and afl-cov will exit
+                            when it appears afl-fuzz has been stopped
       --sleep SLEEP         In --live mode, # of seconds to sleep between checking
                             for new queue files
       --lcov-web-all        generate lcov web reports for all id:NNNNNN* files
