@@ -35,9 +35,16 @@ effective. Code coverage results can help to verify this.
 ## Prerequisites
 `afl-cov` requires the following software:
 
- * afl-fuzz (or at least a directory created by afl-fuzz from a different system)
+ * afl-fuzz
  * python
  * gcov, lcov, genhtml
+
+Note that `afl-cov` can parse files created by `afl-fuzz` from a different
+system, so technically `afl-fuzz` does not need to be installed on the same
+system as `afl-cov`. This supports scenarios where fuzzing output is collected,
+say, within a git repository on one system, and coverage results are produced
+on a different system. However, most workflows typically focus on producing
+`afl-cov` results quickly for current fuzzing runs on the same system.
 
 ## Work Flow
 The general workflow for `afl-cov` is:
@@ -89,6 +96,7 @@ generating code coverage data.
 
 Here is a sample of what the `afl-cov` output looks like:
 
+$ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd "LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f AFL_FILE -a -b -c" --code-dir .
 [+] Imported 184 files from: /path/to/afl-fuzz-output/queue
 [+] AFL file: id:000000,orig:somestr.start (1 / 184)
     lines......: 18.6% (1122 of 6032 lines)
@@ -133,53 +141,82 @@ Here is a sample of what the `afl-cov` output looks like:
       New 'line' coverage: 262
       New 'line' coverage: 263
       New 'line' coverage: 266
+.
+.
+.
+[+] Generating lcov web report in: /path/to/afl-fuzz-output/cov/web/lcov-web-final
+[+] Coverage diff id:000182,src:000000,op:havoc,rep:64 id:000184,src:000000,op:havoc,rep:4
+[+] Final zero coverage report in: /path/to/afl-fuzz-output/cov/zero-cov/zero-cov-final
+[+] Processed 184 / 184 files
+
+In the last few lines above, the locations of the final web coverage and zero
+coverage reports are shown. The zero coverage reports contains function names
+that were never executed across the entire `afl-fuzz` run.
 
 ## Directory Structure
+`afl-cov` creates a few directories for coverage results within the specified
+`afl-fuzz` directory (`-d`). These directories are displayed below, and all
+are contained within the `/path/to/afl-fuzz-output/cov/` directory:
+
+ * `cov/diff/` - contains new code coverage results when `queue/id:NNNNNN*` file
+                 causes `afl-fuzz` to execute new code.
+ * `cov/lcov/` - contains raw code coverage data produced by the lcov front-end to gcov.
+ * `cov/web/`  - contains code coverage results in web format produced by `genhtml`.
+ * `cov/zero-cov/` - contains data for each `queue/id:NNNNNN*` on functions (and optionally lines) that are never executed by `afl-fuzz`.
 
 ## Usage Information
 Basic `--help` output appears below:
 
-      usage: afl-cov [-h] [-e COVERAGE_CMD] [-d AFL_FUZZING_DIR] [-c CODE_DIR] [-O]
+    usage: afl-cov [-h] [-e COVERAGE_CMD] [-d AFL_FUZZING_DIR] [-c CODE_DIR] [-O]
                [--disable-cmd-redirection] [--disable-lcov-web]
                [--disable-coverage-diff] [--disable-coverage-init]
-               [--coverage-diff-only] [--live] [--sleep SLEEP]
-               [--func-search FUNC_SEARCH] [--line-search LINE_SEARCH]
-               [--src-file SRC_FILE] [-v] [-V] [-q]
+               [--coverage-diff-only] [--coverage-include-lines] [--live]
+               [--sleep SLEEP] [--lcov-web-all] [--func-search FUNC_SEARCH]
+               [--line-search LINE_SEARCH] [--src-file SRC_FILE]
+               [--afl-queue-id-limit AFL_QUEUE_ID_LIMIT] [-v] [-V] [-q]
 
-      optional arguments:
-        -h, --help            show this help message and exit
-        -e COVERAGE_CMD, --coverage-cmd COVERAGE_CMD
-                              set command to exec (including args, and assumes code
-                              coverage support)
-        -d AFL_FUZZING_DIR, --afl-fuzzing-dir AFL_FUZZING_DIR
-                              top level AFL fuzzing directory
-        -c CODE_DIR, --code-dir CODE_DIR
-                              directory where the code lives (compiled with code
-                              coverage support)
-        -O, --overwrite       overwrite existing coverage results
-        --disable-cmd-redirection
-                              disable redirection of command results to /dev/null
-        --disable-lcov-web    disable generate of lcov web code coverage reports
-        --disable-coverage-diff
-                              disable code coverage diff mode
-        --disable-coverage-init
-                              disable initialization of code coverage counters at
-                              afl-cov startup
-        --coverage-diff-only  skip running lcov - just show code coverage diffs from
-                              previous afl-cov run
-        --live                process a live AFL directory, stop with Ctrl-C
-        --sleep SLEEP         In --live mode, # of seconds to sleep between checking
-                              for new queue files
-        --func-search FUNC_SEARCH
-                              search for coverage of a specific function
-        --line-search LINE_SEARCH
-                              search for coverage of a specific line number
-                              (requires --src-file)
-        --src-file SRC_FILE   restrict function or line search to a specfic source
-                              file
-        -v, --verbose         verbose mode
-        -V, --version         print version and exit
-        -q, --quiet           quiet mode
+    optional arguments:
+      -h, --help            show this help message and exit
+      -e COVERAGE_CMD, --coverage-cmd COVERAGE_CMD
+                            set command to exec (including args, and assumes code
+                            coverage support)
+      -d AFL_FUZZING_DIR, --afl-fuzzing-dir AFL_FUZZING_DIR
+                            top level AFL fuzzing directory
+      -c CODE_DIR, --code-dir CODE_DIR
+                            directory where the code lives (compiled with code
+                            coverage support)
+      -O, --overwrite       overwrite existing coverage results
+      --disable-cmd-redirection
+                            disable redirection of command results to /dev/null
+      --disable-lcov-web    disable generation of all lcov web code coverage
+                            reports
+      --disable-coverage-diff
+                            disable code coverage diff mode
+      --disable-coverage-init
+                            disable initialization of code coverage counters at
+                            afl-cov startup
+      --coverage-diff-only  skip running lcov - just show code coverage diffs from
+                            previous afl-cov run
+      --coverage-include-lines
+                            include lines in zero-coverage status files
+      --live                process a live AFL directory, stop with Ctrl-C
+      --sleep SLEEP         In --live mode, # of seconds to sleep between checking
+                            for new queue files
+      --lcov-web-all        generate lcov web reports for all id:NNNNNN* files
+                            instead of just the last one
+      --func-search FUNC_SEARCH
+                            search for coverage of a specific function
+      --line-search LINE_SEARCH
+                            search for coverage of a specific line number
+                            (requires --src-file)
+      --src-file SRC_FILE   restrict function or line search to a specfic source
+                            file
+      --afl-queue-id-limit AFL_QUEUE_ID_LIMIT
+                            limit the number of id:NNNNNN* files processed in the
+                            AFL queue/ directory
+      -v, --verbose         verbose mode
+      -V, --version         print version and exit
+      -q, --quiet           quiet mode
 
 ## License
 `afl-cov` is released as open source software under the terms of
