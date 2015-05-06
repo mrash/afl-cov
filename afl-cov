@@ -262,8 +262,6 @@ def extract_coverage(lcov_file):
 
 def gen_coverage(cargs, cov_paths, afl_file, is_final):
 
-    os.mkdir(cov_paths['lcov_web_dir'])
-
     run_cmd("lcov --rc lcov_branch_coverage=1" \
             + " --no-checksum --capture --initial" \
             + " --directory " + cargs.code_dir \
@@ -314,6 +312,7 @@ def gen_web_cov_report(cargs, cov_paths, is_final):
         os.symlink(cov_paths['lcov_web_dir'],
                 cargs.afl_fuzzing_dir + '/cov/web/lcov-web-final')
 
+    os.mkdir(cov_paths['lcov_web_dir'])
     run_cmd("genhtml --branch-coverage --output-directory " \
             + cov_paths['lcov_web_dir'] + " " \
             + cov_paths['lcov_info_final'], \
