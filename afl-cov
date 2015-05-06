@@ -508,7 +508,7 @@ def handle_cmdline():
             help="include lines in zero-coverage status files",
             default=False)
     p.add_argument("--live", action='store_true',
-            help="process a live AFL directory, stop with Ctrl-C",
+            help="process a live AFL directory, and afl-cov will exit when it appears afl-fuzz has been stopped",
             default=False)
     p.add_argument("--sleep", type=int,
             help="In --live mode, # of seconds to sleep between checking for new queue files",
