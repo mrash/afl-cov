@@ -61,7 +61,8 @@ fuzzing cycle. The command line arguments to `afl-cov` must specify the path to
 the output directory used by `afl-fuzz`, and the command to execute along with
 associated arguments. This command and arguments should closely resemble the
 manner in which `afl-fuzz` executes the targeted binary during the fuzzing
-cycle.
+cycle. Note that if there is already an existing directory of AFL fuzzing
+results, then just omit the `--live` argument to process these results.
 
 Here is an example:
 
