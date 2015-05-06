@@ -31,6 +31,7 @@ from shutil import rmtree
 import re
 import subprocess
 import glob
+import string
 import argparse
 import time
 import sys, os
@@ -99,7 +100,7 @@ def main():
 
             cov_paths = gen_paths(cargs, prev_file, f)
 
-            if cargs.coverage_cmd and not cargs.coverage_diff_only:
+            if cargs.coverage_cmd:
                 ### execute the command to generate code coverage stats
                 ### for the current AFL queue file
                 run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f), \
@@ -108,15 +109,17 @@ def main():
                 ### collect the code coverage stats
                 gen_coverage(cargs, cov_paths, f, is_final)
 
-            if not cargs.disable_coverage_diff:
-                ### diff to the previous code coverage and look for
-                ### new lines/functions
-                if file_num > 1:
-                    rv = coverage_diff(cargs, cov_paths,
-                            prev_file, f, is_final)
-                    if rv:
-                        if cargs.func_search or cargs.line_search:
-                            found = 1
+            ### diff to the previous code coverage and look for
+            ### new lines/functions
+            if file_num > 1:
+                skip_search = 0
+                if found:
+                    skip_search = 1
+                if coverage_diff(cargs, cov_paths, \
+                        prev_file, f, is_final, skip_search):
+                    if cargs.func_search or cargs.line_search:
+                        found = 1
+                        if not cargs.coverage_cmd:
                             break
 
             prev_file = f
@@ -136,7 +139,7 @@ def main():
                 gen_web_cov_report(cargs, cov_paths, is_final)
         if is_final:
             zero_cov_final(cov_paths['zero_cov'],
-            cargs.afl_fuzzing_dir + '/cov/zero-cov/zero-cov-final')
+                    cargs.afl_fuzzing_dir + '/cov/zero-cov/zero-cov-final')
 
     if cargs.verbose or not cargs.quiet:
         print "[+] Processed %d / %d files" % (file_num-1, tot_files)
@@ -151,17 +154,34 @@ def main():
 
     return es
 
-def coverage_diff(cargs, cov_paths, a, b, is_final):
+def coverage_diff(cargs, cov_paths, a, b, is_final, skip_search):
+
+    found     = 0
+    do_search = 0
 
     if cargs.verbose or not cargs.quiet:
         print "[+] Coverage diff %s %s" \
                 % (os.path.basename(a), os.path.basename(b))
 
-    old_coverage = extract_coverage(cov_paths['prev_lcov_info_final'])
-    new_coverage = extract_coverage(cov_paths['lcov_info_final'])
+    if not skip_search and cargs.func_search or cargs.line_search:
+        do_search = 1
 
-    ### write out the zero coverage result for the current
-    ### file
+    (old_coverage, search_rv) \
+            = extract_coverage(cov_paths['prev_lcov_info_final'], do_search, cargs)
+
+    if search_rv:
+        ### don't search for the function/line again since we just
+        ### found it
+        found = 1
+        do_search = 0
+
+    (new_coverage, search_rv) \
+            = extract_coverage(cov_paths['lcov_info_final'], do_search, cargs)
+
+    if search_rv:
+        found = 1
+
+    ### write out the zero coverage result for the current file
     if is_final:
         zero_cov_final(cov_paths['zero_cov'],
                 cargs.afl_fuzzing_dir + '/cov/zero-cov/zero-cov-final')
@@ -193,43 +213,22 @@ def coverage_diff(cargs, cov_paths, a, b, is_final):
                         if cargs.verbose or not cargs.quiet:
                             tee_print("      New '" + ctype + "' coverage: " + val,
                                     cov_paths['diff'])
-                        if ctype == 'function':
-                            if cargs.func_search and cargs.func_search == val:
-                                if cargs.src_file:
-                                    if cargs.src_file == f:
-                                        tee_print("[+] Function '%s' in file: '%s' executed by: %s" \
-                                            % (cargs.func_search, cargs.src_file, \
-                                            os.path.basename(b)), cov_paths['diff'])
-                                        return 1
-                                else:
-                                    tee_print("[+] Function '%s' executed by: %s" \
-                                        % (cargs.func_search, os.path.basename(b)),
-                                        cov_paths['diff'])
-                                    return 1
-                        elif ctype == 'line':
-                            if cargs.line_search and cargs.line_search == val:
-                                if cargs.src_file:
-                                    if cargs.src_file == f:
-                                        tee_print("[+] Line '%s' in file: '%s' executed by: %s" \
-                                            % (cargs.line_search, cargs.src_file, \
-                                            os.path.basename(b)), cov_paths['diff'])
-                                        return 1
-                                else:
-                                    tee_print("[+] Line '%s' executed by: %s" \
-                                        % (cargs.line_search, os.path.basename(b)),
-                                        cov_paths['diff'])
-                                    return 1
-
-    return 0
+    return found
 
 def zero_cov_final(path, lpath):
-    print "[+] Final zero coverage report in: %s" % lpath
-    os.symlink(path, lpath)
+    if not os.path.exists(lpath):
+        print "[+] Final zero coverage report in: %s" % lpath
+        os.symlink(path, lpath)
     return
 
-def extract_coverage(lcov_file):
+def extract_coverage(lcov_file, do_search, cargs):
 
-    coverage = {}
+    search_rv = 0
+    coverage  = {}
+
+    if do_search:
+        id_file = string.replace(os.path.basename(lcov_file),
+                '.lcov_info_final', '')
 
     ### populate old lcov output for functions/lines that were called
     ### zero times
@@ -247,18 +246,47 @@ def extract_coverage(lcov_file):
                 continue
 
             if current_file:
-                ### look for functions that were never called
-                m = re.search('^FNDA:0,(\S+)', line)
-                if m and m.group(1):
-                    coverage[current_file]['function'][m.group(1) + '()'] = ''
+                m = re.search('^FNDA:(\d+),(\S+)', line)
+                if m and m.group(2):
+                    fcn = m.group(2) + '()'
+                    if m.group(1) == '0':
+                        ### the function was never called
+                        coverage[current_file]['function'][fcn] = ''
+                    elif do_search:
+                        ### positive coverage for this function
+                        if cargs.func_search and fcn == cargs.func_search:
+                            if cargs.src_file:
+                                if cargs.src_file == current_file:
+                                    print "[+] Function '%s' in file: '%s' executed by: %s" \
+                                            % (fcn, current_file, id_file)
+                                    search_rv = 1
+                            else:
+                                print "[+] Function '%s' executed by: %s" \
+                                        % (fcn, id_file)
+                                search_rv = 1
                     continue
 
                 ### look for lines that were never called
-                m = re.search('^DA:(\d+),0', line)
+                m = re.search('^DA:(\d+),(\d+)', line)
                 if m and m.group(1):
-                    coverage[current_file]['line'][m.group(1)] = ''
+                    lnum = m.group(1)
+                    if m.group(2) == '0':
+                        ### the was never executed
+                        coverage[current_file]['line'][lnum] = ''
+                    elif do_search:
+                        ### positive coverage for this line
+                        if cargs.line_search and lnum == cargs.line_search:
+                            if cargs.src_file:
+                                if cargs.src_file == current_file:
+                                    print "[+] Line '%s' in file: '%s' executed by: %s" \
+                                            % (lnum, current_file, id_file)
+                                    search_rv = 1
+                            else:
+                                print "[+] Function '%s' executed by: %s" \
+                                        % (lnum, id_file)
+                                search_rv = 1
 
-    return coverage
+    return coverage, search_rv
 
 def gen_coverage(cargs, cov_paths, afl_file, is_final):
 
@@ -408,31 +436,27 @@ def validate_args(cargs):
     create_cov_dirs = 0
     if os.path.exists(cargs.afl_fuzzing_dir + '/cov'):
         if cargs.overwrite:
-            if cargs.coverage_diff_only:
-                print "[*] --overwrite and --coverage-diff are incompatible"
-                return 0
             rmtree(cargs.afl_fuzzing_dir + '/cov')
             create_cov_dirs = 1
         else:
-            if not cargs.coverage_diff_only:
-                print "[*] Existing coverage dir found, use --overwrite to re-calculate coverage"
+            if not cargs.func_search and not cargs.line_search:
+                print "[*] Existing coverage dir found, use --overwrite to " \
+                        "re-calculate coverage"
                 return 0
     else:
-        if cargs.coverage_diff_only:
-            print "[*] --coverage-diff mode requires a previous afl-cov run"
-            return 0
         create_cov_dirs = 1
 
     if create_cov_dirs:
+        if not cargs.coverage_cmd:
+            print "[*] Must set --coverage-cmd unless using --func-search " \
+                    "against existing afl-cov directory"
+            return 0
+
         os.mkdir(cargs.afl_fuzzing_dir + '/cov')
         os.mkdir(cargs.afl_fuzzing_dir + '/cov/web')
         os.mkdir(cargs.afl_fuzzing_dir + '/cov/lcov')
         os.mkdir(cargs.afl_fuzzing_dir + '/cov/zero-cov')
         os.mkdir(cargs.afl_fuzzing_dir + '/cov/diff')
-
-    if not cargs.coverage_diff_only and not cargs.coverage_cmd:
-        print "[*] Must set --coverage-cmd unless running in --coverage-diff-only mode"
-        return 0
 
     if cargs.coverage_cmd and 'AFL_FILE' not in cargs.coverage_cmd:
         print "[*] --coverage-cmd must contain AFL_FILE"
@@ -443,18 +467,21 @@ def validate_args(cargs):
             print "[*] --code-dir path does not exist"
             return 0
     else:
-        if not cargs.coverage_diff_only:
-            print "[*] Must set --code-dir unless running in --coverage-diff-only mode"
+        if not cargs.func_search and not cargs.line_search:
+            print "[*] Must set --code-dir unless using --func-search " \
+                    "against existing afl-cov directory"
             return 0
 
     if cargs.func_search or cargs.line_search:
-        if not cargs.verbose:
+        if '()' not in cargs.func_search:
+            cargs.func_search += '()'
+        if not cargs.verbose and not cargs.coverage_cmd:
             cargs.quiet = 1
         if cargs.line_search and not cargs.src_file:
             print "[*] Must set --src-file in --line-search mode"
             return 0
 
-    if not cargs.coverage_diff_only and not cargs.disable_coverage_init:
+    if not cargs.disable_coverage_init and create_cov_dirs:
         ### reset code coverage counters
         run_cmd("lcov --rc lcov_branch_coverage=1 " \
                 + "--no-checksum --zerocounters --directory " \
@@ -494,14 +521,8 @@ def handle_cmdline():
     p.add_argument("--disable-lcov-web", action='store_true',
             help="disable generation of all lcov web code coverage reports",
             default=False)
-    p.add_argument("--disable-coverage-diff", action='store_true',
-            help="disable code coverage diff mode",
-            default=False)
     p.add_argument("--disable-coverage-init", action='store_true',
             help="disable initialization of code coverage counters at afl-cov startup",
-            default=False)
-    p.add_argument("--coverage-diff-only", action='store_true',
-            help="skip running lcov - just show code coverage diffs from previous afl-cov run",
             default=False)
     p.add_argument("--coverage-include-lines", action='store_true',
             help="include lines in zero-coverage status files",
