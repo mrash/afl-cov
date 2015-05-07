@@ -1,0 +1,4 @@
+
+Michal Zalewski
+    - Made the original suggestion of sending afl-fuzz test cases back through
+      a project with gcov profiling support built-in.
