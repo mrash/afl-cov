@@ -82,7 +82,9 @@ fuzzing with AFL where a file is read from the filesystem, here is an example:
 
 ```bash
 $ cd /path/to/project-gcov/
-$ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd "LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f AFL_FILE -a -b -c" --code-dir .
+$ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
+"LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f AFL_FILE \
+-a -b -c" --code-dir .
 ```
 
 3) With `afl-cov` running, open a separate terminal/shell, and launch
