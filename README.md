@@ -3,7 +3,7 @@
 ## Introduction
 `afl-cov` uses test case files produced by the AFL fuzzer (see:
 [http://lcamtuf.coredump.cx/afl/](http://lcamtuf.coredump.cx/afl/) to produce
-gcov/lcov code coverage results of the targeted binary. Code coverage is
+gcov code coverage results of the targeted binary. Code coverage is
 interpreted from one case to the next by `afl-cov` in order to determine which
 new functions and lines are hit by AFL with each new test case. Further,
 `afl-cov` allows for specific lines or functions to be searched for within
@@ -47,10 +47,16 @@ on a different system. However, most workflows typically focus on producing
 `afl-cov` results quickly for current fuzzing runs on the same system.
 
 ## Work Flow
-The general workflow for `afl-cov` is:
+At a high level, the general workflow for `afl-cov` is:
+
+1) Create a spare copy of the project sources compiled with gcov profiling support.
+2) Run `afl-cov` while `afl-fuzz` is building test cases.
+3) Review the cumulative code coverage results in the final web report.
+
+Now, in more detail:
 
 1) Copy the project sources to two different directories
-`/path/to/project-fuzzing/` and `/path/to/project-gcov/`. The first
+`/path/to/afl-fuzz-output/` and `/path/to/project-gcov/`. The first
 will contain the project binaries compiled for AFL fuzzing, and the second will
 contain the project binaries compiled for gcov profiling support. For the
 `/path/to/project-gcov/` directory, compile the project with gcov profiling
@@ -67,7 +73,7 @@ Here is an example:
 
 ```bash
 $ cd /path/to/project-gcov/
-$ afl-cov -d /path/to/afl-fuzz-output/dir/ --live --coverage-cmd \
+$ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
 "cat AFL_FILE | LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -a -b -c" \
 --code-dir .
 ```
@@ -95,7 +101,7 @@ $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
 ```bash
 $ cd /path/to/project-fuzzing/
 $ LD_LIBRARY_PATH=./lib/.libs afl-fuzz -T somebin -t 1000 -i ./test-cases/ \
--o /path/to/afl-fuzz-output/dir/ ./bin/.libs/somebin -a -b -c"
+-o /path/to/afl-fuzz-output/ ./bin/.libs/somebin -a -b -c"
 ```
 
 The familiar AFL status screen will be displayed, and `afl-cov` will start
@@ -167,6 +173,40 @@ In the last few lines above, the locations of the final web coverage and zero
 coverage reports are shown. The zero coverage reports contains function names
 that were never executed across the entire `afl-fuzz` run.
 
+The code coverage results in `/path/to/afl-fuzz-output/cov/web/lcov-web-final`
+represent cumlative code coverage across all AFL test cases. This data can then
+be reviewed to ensure that all expected functions are indeed exercised by AFL -
+just point a web browser at `/path/to/afl-fuzz-output/cov/web/lcov-web-final/index.html`
+
+### Other Examples
+The workflow above is probably the main strategy for using `afl-cov`. However,
+additional use cases are supported such as:
+
+1) Suppose there are a set of wrapper scripts around `afl-fuzz` to run fuzzing
+cycles against various aspects of a project. By building a set of corresponding
+`afl-cov` wrappers, and then using the `--disable-coverage-init` option on all
+but the first of these wrappers, it is possible to generate code coverage results
+across the entire set of `afl-fuzz` fuzzing runs. (By default, `afl-cov` resets
+gcov counters to zero at start time, but the `--disable-coverage-init` stops this
+behavior.) The end result is a global picture of code coverage across all
+invocations of `afl-fuzz`.
+
+2) Specific functions can be searched for in the code coverage results, and
+`afl-cov` will return the first `afl-fuzz` test case where a given function is
+executed. This allows `afl-cov` to be used as a validation tool by other scripts
+and testing infrastructure. For example, a test case could be written around
+whether an important function is executed by `afl-fuzz` to validate a patching
+strategy mentioned in the introduction.
+
+Here is an example where the first test case that executes the function
+`validate_cmd_msg()` is returned (this is after all `afl-cov` results have been
+produced in the main workflow above):
+
+```bash
+./afl-cov -d /path/to/afl-fuzz-output  --func-search "validate_cmd_msg"
+[+] Function 'verify_file_perms_ownership()' executed by: id:000002,orig:somestr384.start id:000003,orig:somestr.start
+```
+
 ## Directory Structure
 `afl-cov` creates a few directories for coverage results within the specified
 `afl-fuzz` directory (`-d`). These directories are displayed below, and all
@@ -176,7 +216,8 @@ are contained within the `/path/to/afl-fuzz-output/cov/` directory:
                  causes `afl-fuzz` to execute new code.
  * `cov/lcov/` - contains raw code coverage data produced by the lcov front-end to gcov.
  * `cov/web/`  - contains code coverage results in web format produced by `genhtml`.
- * `cov/zero-cov/` - contains data for each `queue/id:NNNNNN*` on functions (and optionally lines) that are never executed by `afl-fuzz`.
+ * `cov/zero-cov/` - contains data for each `queue/id:NNNNNN*` on functions (and
+                     optionally lines) that are never executed by `afl-fuzz`.
 
 ## Usage Information
 Basic `--help` output appears below:
