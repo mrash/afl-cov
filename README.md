@@ -174,7 +174,7 @@ coverage reports are shown. The zero coverage reports contains function names
 that were never executed across the entire `afl-fuzz` run.
 
 The code coverage results in `/path/to/afl-fuzz-output/cov/web/lcov-web-final`
-represent cumlative code coverage across all AFL test cases. This data can then
+represent cumulative code coverage across all AFL test cases. This data can then
 be reviewed to ensure that all expected functions are indeed exercised by AFL -
 just point a web browser at `/path/to/afl-fuzz-output/cov/web/lcov-web-final/index.html`
 
@@ -260,7 +260,7 @@ Basic `--help` output appears below:
       --line-search LINE_SEARCH
                             search for coverage of a specific line number
                             (requires --src-file)
-      --src-file SRC_FILE   restrict function or line search to a specfic source
+      --src-file SRC_FILE   restrict function or line search to a specific source
                             file
       --afl-queue-id-limit AFL_QUEUE_ID_LIMIT
                             limit the number of id:NNNNNN* files processed in the
