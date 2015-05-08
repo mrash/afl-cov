@@ -67,7 +67,9 @@ Here is an example:
 
 ```bash
 $ cd /path/to/project-gcov/
-$ afl-cov -d /path/to/afl-fuzz-output/dir/ --live --coverage-cmd "cat AFL_FILE | LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -a -b -c" --code-dir .
+$ afl-cov -d /path/to/afl-fuzz-output/dir/ --live --coverage-cmd \
+"cat AFL_FILE | LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -a -b -c" \
+--code-dir .
 ```
 
 Note the `AFL_FILE` string above refers to the test case file that AFL will
@@ -83,8 +85,8 @@ fuzzing with AFL where a file is read from the filesystem, here is an example:
 ```bash
 $ cd /path/to/project-gcov/
 $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
-"LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f AFL_FILE \
--a -b -c" --code-dir .
+"LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f AFL_FILE -a -b -c" \
+--code-dir .
 ```
 
 3) With `afl-cov` running, open a separate terminal/shell, and launch
@@ -92,7 +94,8 @@ $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
 
 ```bash
 $ cd /path/to/project-fuzzing/
-$ LD_LIBRARY_PATH=./lib/.libs afl-fuzz -T somebin -t 1000 -i ./test-cases/ -o /path/to/afl-fuzz-output/dir/ ./bin/.libs/somebin -a -b -c"
+$ LD_LIBRARY_PATH=./lib/.libs afl-fuzz -T somebin -t 1000 -i ./test-cases/ \
+-o /path/to/afl-fuzz-output/dir/ ./bin/.libs/somebin -a -b -c"
 ```
 
 The familiar AFL status screen will be displayed, and `afl-cov` will start
@@ -105,7 +108,8 @@ generating code coverage data.
 Here is a sample of what the `afl-cov` output looks like:
 
 ```bash
-$ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd "LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f AFL_FILE -a -b -c" --code-dir .
+$ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
+"LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f AFL_FILE -a -b -c" --code-dir .
 [+] Imported 184 files from: /path/to/afl-fuzz-output/queue
 [+] AFL file: id:000000,orig:somestr.start (1 / 184)
     lines......: 18.6% (1122 of 6032 lines)
