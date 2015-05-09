@@ -67,9 +67,7 @@ fuzzing cycle. The command line arguments to `afl-cov` must specify the path to
 the output directory used by `afl-fuzz`, and the command to execute along with
 associated arguments. This command and arguments should closely resemble the
 manner in which `afl-fuzz` executes the targeted binary during the fuzzing
-cycle.
-
-Here is an example:
+cycle. Here is an example:
 
 ```bash
 $ cd /path/to/project-gcov/
@@ -78,15 +76,15 @@ $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
 --code-dir .
 ```
 
-Note the `AFL_FILE` string above refers to the test case file that AFL will
-build in the `queue/` directory under `/path/to/project-fuzz`. Just leave this
-string as-is - `afl-cov` will automatically substitute it with each AFL
-`queue/id:NNNNNN*` in succession as is builds the code coverage reports.
+    Note the `AFL_FILE` string above refers to the test case file that AFL will
+    build in the `queue/` directory under `/path/to/project-fuzz`. Just leave this
+    string as-is - `afl-cov` will automatically substitute it with each AFL
+    `queue/id:NNNNNN*` in succession as is builds the code coverage reports.
 
-Also, in the above command, this handles the case where the AFL fuzzing cycle
-is fuzzing the targeted binary via stdin. This explains the
-`cat AFL_FILE | ... ./bin/.lib/somebin ...` invocation. For the other style of
-fuzzing with AFL where a file is read from the filesystem, here is an example:
+    Also, in the above command, this handles the case where the AFL fuzzing cycle
+    is fuzzing the targeted binary via stdin. This explains the
+    `cat AFL_FILE | ... ./bin/.lib/somebin ...` invocation. For the other style of
+    fuzzing with AFL where a file is read from the filesystem, here is an example:
 
 ```bash
 $ cd /path/to/project-gcov/
