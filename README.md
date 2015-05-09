@@ -46,7 +46,7 @@ say, within a git repository on one system, and coverage results are produced
 on a different system. However, most workflows typically focus on producing
 `afl-cov` results quickly for current fuzzing runs on the same system.
 
-## Work Flow
+## WorkFlow
 At a high level, the general workflow for `afl-cov` is:
 
 1. Create a spare copy of the project sources compiled with gcov profiling support.
@@ -271,3 +271,8 @@ Basic `--help` output appears below:
 `afl-cov` is released as open source software under the terms of
 the **GNU General Public License (GPL v2)**. The latest release can be found
 at [https://github.com/mrash/afl-cov/releases](https://github.com/mrash/afl-cov/releases)
+
+## Contact
+All feature requests and bug fixes are managed through github issues tracking.
+However, you can email me (michael.rash_AT_gmail.com), or reach me through
+Twitter ([https://twitter.com/michaelrash](@michaelrash)).
