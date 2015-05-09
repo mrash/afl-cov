@@ -49,20 +49,20 @@ on a different system. However, most workflows typically focus on producing
 ## Work Flow
 At a high level, the general workflow for `afl-cov` is:
 
-1) Create a spare copy of the project sources compiled with gcov profiling support.
-2) Run `afl-cov` while `afl-fuzz` is building test cases.
-3) Review the cumulative code coverage results in the final web report.
+1. Create a spare copy of the project sources compiled with gcov profiling support.
+2. Run `afl-cov` while `afl-fuzz` is building test cases.
+3. Review the cumulative code coverage results in the final web report.
 
 Now, in more detail:
 
-1) Copy the project sources to two different directories
+1. Copy the project sources to two different directories
 `/path/to/afl-fuzz-output/` and `/path/to/project-gcov/`. The first
 will contain the project binaries compiled for AFL fuzzing, and the second will
 contain the project binaries compiled for gcov profiling support. For the
 `/path/to/project-gcov/` directory, compile the project with gcov profiling
 support (gcc `-fprofile-arcs -ftest-coverage`).
 
-2) Start up `afl-cov` in `--live` mode before also starting the `afl-fuzz`
+2. Start up `afl-cov` in `--live` mode before also starting the `afl-fuzz`
 fuzzing cycle. The command line arguments to `afl-cov` must specify the path to
 the output directory used by `afl-fuzz`, and the command to execute along with
 associated arguments. This command and arguments should closely resemble the
@@ -95,7 +95,7 @@ $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
 --code-dir .
 ```
 
-3) With `afl-cov` running, open a separate terminal/shell, and launch
+3. With `afl-cov` running, open a separate terminal/shell, and launch
 `afl-fuzz`:
 
 ```bash
@@ -182,7 +182,7 @@ just point a web browser at `/path/to/afl-fuzz-output/cov/web/lcov-web-final/ind
 The workflow above is probably the main strategy for using `afl-cov`. However,
 additional use cases are supported such as:
 
-1) Suppose there are a set of wrapper scripts around `afl-fuzz` to run fuzzing
+1. Suppose there are a set of wrapper scripts around `afl-fuzz` to run fuzzing
 cycles against various aspects of a project. By building a set of corresponding
 `afl-cov` wrappers, and then using the `--disable-coverage-init` option on all
 but the first of these wrappers, it is possible to generate code coverage results
@@ -191,7 +191,7 @@ gcov counters to zero at start time, but the `--disable-coverage-init` stops thi
 behavior.) The end result is a global picture of code coverage across all
 invocations of `afl-fuzz`.
 
-2) Specific functions can be searched for in the code coverage results, and
+2. Specific functions can be searched for in the code coverage results, and
 `afl-cov` will return the first `afl-fuzz` test case where a given function is
 executed. This allows `afl-cov` to be used as a validation tool by other scripts
 and testing infrastructure. For example, a test case could be written around
