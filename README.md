@@ -55,14 +55,14 @@ At a high level, the general workflow for `afl-cov` is:
 
 Now, in more detail:
 
-1. Copy the project sources to two different directories
+* Copy the project sources to two different directories
 `/path/to/afl-fuzz-output/` and `/path/to/project-gcov/`. The first
 will contain the project binaries compiled for AFL fuzzing, and the second will
 contain the project binaries compiled for gcov profiling support. For the
 `/path/to/project-gcov/` directory, compile the project with gcov profiling
 support (gcc `-fprofile-arcs -ftest-coverage`).
 
-2. Start up `afl-cov` in `--live` mode before also starting the `afl-fuzz`
+* Start up `afl-cov` in `--live` mode before also starting the `afl-fuzz`
 fuzzing cycle. The command line arguments to `afl-cov` must specify the path to
 the output directory used by `afl-fuzz`, and the command to execute along with
 associated arguments. This command and arguments should closely resemble the
@@ -76,15 +76,15 @@ $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
 --code-dir .
 ```
 
-    Note the `AFL_FILE` string above refers to the test case file that AFL will
-    build in the `queue/` directory under `/path/to/project-fuzz`. Just leave this
-    string as-is - `afl-cov` will automatically substitute it with each AFL
-    `queue/id:NNNNNN*` in succession as is builds the code coverage reports.
+Note the `AFL_FILE` string above refers to the test case file that AFL will
+build in the `queue/` directory under `/path/to/project-fuzz`. Just leave this
+string as-is - `afl-cov` will automatically substitute it with each AFL
+`queue/id:NNNNNN*` in succession as is builds the code coverage reports.
 
-    Also, in the above command, this handles the case where the AFL fuzzing cycle
-    is fuzzing the targeted binary via stdin. This explains the
-    `cat AFL_FILE | ... ./bin/.lib/somebin ...` invocation. For the other style of
-    fuzzing with AFL where a file is read from the filesystem, here is an example:
+Also, in the above command, this handles the case where the AFL fuzzing cycle
+is fuzzing the targeted binary via stdin. This explains the
+`cat AFL_FILE | ... ./bin/.lib/somebin ...` invocation. For the other style of
+fuzzing with AFL where a file is read from the filesystem, here is an example:
 
 ```bash
 $ cd /path/to/project-gcov/
@@ -93,7 +93,7 @@ $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
 --code-dir .
 ```
 
-3. With `afl-cov` running, open a separate terminal/shell, and launch
+* With `afl-cov` running, open a separate terminal/shell, and launch
 `afl-fuzz`:
 
 ```bash
