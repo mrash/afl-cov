@@ -275,4 +275,4 @@ at [https://github.com/mrash/afl-cov/releases](https://github.com/mrash/afl-cov/
 ## Contact
 All feature requests and bug fixes are managed through github issues tracking.
 However, you can email me (michael.rash_AT_gmail.com), or reach me through
-Twitter ([https://twitter.com/michaelrash](@michaelrash)).
+Twitter ([@michaelrash](https://twitter.com/michaelrash)).
