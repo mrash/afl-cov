@@ -99,7 +99,7 @@ $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
 ```bash
 $ cd /path/to/project-fuzzing/
 $ LD_LIBRARY_PATH=./lib/.libs afl-fuzz -T somebin -t 1000 -i ./test-cases/ \
--o /path/to/afl-fuzz-output/ ./bin/.libs/somebin -a -b -c"
+-o /path/to/afl-fuzz-output/ ./bin/.libs/somebin -a -b -c
 ```
 
 The familiar AFL status screen will be displayed, and `afl-cov` will start
