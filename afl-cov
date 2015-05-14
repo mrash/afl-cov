@@ -337,7 +337,7 @@ def gen_web_cov_report(cargs, cov_paths, is_final):
     if is_final:
         print "[+] Generating lcov web report in: %s" \
                 % cargs.afl_fuzzing_dir + '/cov/web/lcov-web-final'
-        os.symlink(cov_paths['lcov_web_dir'],
+        os.symlink(cov_paths['lcov_web_dir'] + '/index.html',
                 cargs.afl_fuzzing_dir + '/cov/web/lcov-web-final')
 
     os.mkdir(cov_paths['lcov_web_dir'])
