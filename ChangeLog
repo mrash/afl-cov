@@ -1,0 +1,6 @@
+afl-cov-0.2 (05//2015):
+    - Use the 'fuzzer_stats' file for acquiring the afl-fuzz PID in --live
+      mode. This closes issue #4 on github.
+
+afl-cov-0.1 (05/09/2015):
+    - Initial release

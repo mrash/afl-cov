@@ -28,6 +28,7 @@
 #
 
 from shutil import rmtree
+import errno
 import re
 import subprocess
 import glob
@@ -348,14 +349,24 @@ def gen_web_cov_report(cargs, cov_paths, is_final):
     return
 
 def is_afl_fuzz_running(cargs):
-    ### root  12765 10.1  0.2 7336 2616 pts/5   S+  08:45  0:00 afl-fuzz -T ...
-    out = run_cmd("ps auxww", cargs, 1)
 
     found = 0
-    for line in out.splitlines():
-        if (re.search('\d\:\d{2}\s+afl\-fuzz\s', line)):
-            found = 1
-            break
+
+    with open(cargs.afl_fuzzing_dir + '/fuzzer_stats', 'r') as f:
+        for line in f:
+            line = line.strip()
+            ### fuzzer_pid     : 13238
+            m = re.search('fuzzer_pid\s+\:\s+(\d+)', line)
+            if m and m.group(1):
+                pid = int(m.group(1))
+                try:
+                    os.kill(pid, 0)
+                except OSError as e:
+                    if e.errno == errno.EPERM:
+                        found = 1
+                else:
+                    found = 1
+                break
 
     return found
 
