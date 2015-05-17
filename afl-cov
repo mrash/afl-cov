@@ -37,6 +37,9 @@ import argparse
 import time
 import sys, os
 
+WANT_OUTPUT = 1
+NO_OUTPUT   = 0
+
 def main():
 
     version      = '0.1'
@@ -105,7 +108,7 @@ def main():
                 ### execute the command to generate code coverage stats
                 ### for the current AFL queue file
                 run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f), \
-                        cargs, 0)
+                        cargs, NO_OUTPUT)
 
                 ### collect the code coverage stats
                 gen_coverage(cargs, cov_paths, f, is_final)
@@ -296,24 +299,24 @@ def gen_coverage(cargs, cov_paths, afl_file, is_final):
             + " --directory " + cargs.code_dir \
             + " --output-file " \
             + cov_paths['lcov_base'], \
-            cargs, 0)
+            cargs, NO_OUTPUT)
 
     run_cmd("lcov --rc lcov_branch_coverage=1" \
             + " --no-checksum --capture --directory " \
             + cargs.code_dir + " --output-file " \
             + cov_paths['lcov_info'], \
-            cargs, 0)
+            cargs, NO_OUTPUT)
 
     run_cmd("lcov --rc lcov_branch_coverage=1" \
             + " --no-checksum -a " + cov_paths['lcov_base'] \
             + " -a " + cov_paths['lcov_info'] \
             + " --output-file " + cov_paths['lcov_info_final'], \
-            cargs, 0)
+            cargs, NO_OUTPUT)
 
     out = run_cmd("lcov --rc lcov_branch_coverage=1" \
             + " --no-checksum -r " + cov_paths['lcov_info'] \
             + " /usr/include/*  --output-file " \
-            + cov_paths['lcov_info_final'], cargs, 1)
+            + cov_paths['lcov_info_final'], cargs, WANT_OUTPUT)
 
     for line in out.splitlines():
         m = re.search('^\s+(lines\.\..*\:\s.*)', line)
@@ -345,7 +348,7 @@ def gen_web_cov_report(cargs, cov_paths, is_final):
     run_cmd("genhtml --branch-coverage --output-directory " \
             + cov_paths['lcov_web_dir'] + " " \
             + cov_paths['lcov_info_final'], \
-            cargs, 0)
+            cargs, NO_OUTPUT)
     return
 
 def is_afl_fuzz_running(cargs):
@@ -407,7 +410,7 @@ def run_cmd(cmd, cargs, collect):
     if not cargs.disable_cmd_redirection:
         fh = open(os.devnull, 'w')
 
-    if collect:
+    if collect == WANT_OUTPUT:
         out = subprocess.check_output(cmd.split())
     else:
         subprocess.call(cmd, stdin=None,
@@ -496,7 +499,7 @@ def validate_args(cargs):
         ### reset code coverage counters
         run_cmd("lcov --rc lcov_branch_coverage=1 " \
                 + "--no-checksum --zerocounters --directory " \
-                + cargs.code_dir, cargs, 0)
+                + cargs.code_dir, cargs, NO_OUTPUT)
 
     return 1
 
