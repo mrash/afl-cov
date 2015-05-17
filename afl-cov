@@ -173,6 +173,11 @@ def coverage_diff(cargs, cov_paths, a, b, is_final, skip_search):
     (old_coverage, search_rv) \
             = extract_coverage(cov_paths['prev_lcov_info_final'], do_search, cargs)
 
+    ### with the coverage from the previous lcov results extracted,
+    ### we remove that file unless instructed to keep it
+    if not cargs.preserve_all_lcov_files:
+        rm_prev_cov_files(cov_paths)
+
     if search_rv:
         ### don't search for the function/line again since we just
         ### found it
@@ -218,6 +223,12 @@ def coverage_diff(cargs, cov_paths, a, b, is_final, skip_search):
                             tee_print("      New '" + ctype + "' coverage: " + val,
                                     cov_paths['diff'])
     return found
+
+def rm_prev_cov_files(cov_paths):
+    os.remove(cov_paths['prev_lcov_base'])
+    os.remove(cov_paths['prev_lcov_info'])
+    os.remove(cov_paths['prev_lcov_info_final'])
+    return
 
 def zero_cov_final(path, lpath):
     if not os.path.exists(lpath):
@@ -393,6 +404,12 @@ def gen_paths(cargs, prev_afl_file, afl_file):
             + basename + '.lcov_info_final'
 
     if prev_afl_file:
+        cov_paths['prev_lcov_base'] = cargs.afl_fuzzing_dir \
+                + '/cov/lcov/' + os.path.basename(prev_afl_file) \
+                + '.lcov_base'
+        cov_paths['prev_lcov_info'] = cargs.afl_fuzzing_dir \
+                + '/cov/lcov/' + os.path.basename(prev_afl_file) \
+                + '.lcov_info'
         cov_paths['prev_lcov_info_final'] = cargs.afl_fuzzing_dir \
                 + '/cov/lcov/' + os.path.basename(prev_afl_file) \
                 + '.lcov_info_final'
@@ -549,6 +566,9 @@ def handle_cmdline():
             default=60)
     p.add_argument("--lcov-web-all", action='store_true',
             help="generate lcov web reports for all id:NNNNNN* files instead of just the last one",
+            default=False)
+    p.add_argument("--preserve-all-lcov-files", action='store_true',
+            help="Keep all lcov files (not usually necessary)",
             default=False)
     p.add_argument("--func-search", type=str,
             help="search for coverage of a specific function")
