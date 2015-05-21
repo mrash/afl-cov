@@ -123,7 +123,8 @@ def main():
                         prev_file, f, is_final, skip_search):
                     if cargs.func_search or cargs.line_search:
                         found = 1
-                        if not cargs.coverage_cmd:
+                        if not (cargs.func_search and cargs.line_search) \
+                                and not cargs.coverage_cmd:
                             break
 
             prev_file = f
@@ -169,6 +170,13 @@ def coverage_diff(cargs, cov_paths, a, b, is_final, skip_search):
 
     if not skip_search and cargs.func_search or cargs.line_search:
         do_search = 1
+
+    if do_search and not cargs.coverage_cmd:
+        ### we are only search any existing coverage files in this case
+        if os.path.exists(cov_paths['diff']):
+            return search_diff(cov_paths, cargs)
+        else:
+            return 0
 
     (old_coverage, search_rv) \
             = extract_coverage(cov_paths['prev_lcov_info_final'], do_search, cargs)
@@ -290,18 +298,30 @@ def extract_coverage(lcov_file, do_search, cargs):
                         coverage[current_file]['line'][lnum] = ''
                     elif do_search:
                         ### positive coverage for this line
-                        if cargs.line_search and lnum == cargs.line_search:
-                            if cargs.src_file:
-                                if cargs.src_file == current_file:
-                                    print "[+] Line '%s' in file: '%s' executed by: %s" \
-                                            % (lnum, current_file, id_file)
-                                    search_rv = 1
-                            else:
-                                print "[+] Function '%s' executed by: %s" \
-                                        % (lnum, id_file)
+                        if cargs.src_file == current_file \
+                                and cargs.line_search and lnum == cargs.line_search:
+                            if cargs.src_file == current_file:
+                                print "[+] Line '%s' in file: '%s' executed by: %s" \
+                                        % (lnum, current_file, id_file)
                                 search_rv = 1
 
     return coverage, search_rv
+
+def search_diff(cov_paths, cargs):
+    found = 0
+    with open(cov_paths['diff'], 'r') as f:
+        for line in f:
+            line = line.strip()
+            ### cargs.func_search includes the closing '()'
+            if cargs.func_search and cargs.func_search in line:
+                print "[+] Function '%s' executed by: '%s'" \
+                        % (cargs.func_search, cov_paths['id_file'])
+                found = 1
+            if cargs.line_search and line.split()[-1] == cargs.line_search:
+                print "[+] Line '%s' in file: '%s' executed by: '%s'" \
+                        % (cargs.line_search, cargs.src_file, cov_paths['id_file'])
+                found = 1
+    return found
 
 def gen_coverage(cargs, cov_paths, afl_file, is_final):
 
@@ -402,6 +422,7 @@ def gen_paths(cargs, prev_afl_file, afl_file):
             + basename + '.lcov_info'
     cov_paths['lcov_info_final'] = cargs.afl_fuzzing_dir + '/cov/lcov/' \
             + basename + '.lcov_info_final'
+    cov_paths['id_file'] = basename
 
     if prev_afl_file:
         cov_paths['prev_lcov_base'] = cargs.afl_fuzzing_dir \
@@ -444,7 +465,7 @@ def import_dir(qdir):
 def validate_args(cargs):
 
     if not cargs.afl_fuzzing_dir:
-        print "[*] Must specify either --afl-fuzzing-dir"
+        print "[*] Must specify AFL fuzzing dir with --afl-fuzzing-dir or -d"
         return 0
 
     if cargs.live:
@@ -462,6 +483,15 @@ def validate_args(cargs):
         if not fuzzing_dir_exists(cargs):
             print "[*] It doesn't look like directory '%s' exists" \
                 % (cargs.afl_fuzzing_dir + '/queue')
+            return 0
+
+    if cargs.coverage_cmd:
+        if 'AFL_FILE' not in cargs.coverage_cmd:
+            print "[*] --coverage-cmd must contain AFL_FILE"
+            return 0
+    else:
+        if not cargs.func_search and not cargs.line_search:
+            print "[*] Must set --coverage-cmd or --func-search/--line-search"
             return 0
 
     create_cov_dirs = 0
@@ -489,10 +519,6 @@ def validate_args(cargs):
         os.mkdir(cargs.afl_fuzzing_dir + '/cov/zero-cov')
         os.mkdir(cargs.afl_fuzzing_dir + '/cov/diff')
 
-    if cargs.coverage_cmd and 'AFL_FILE' not in cargs.coverage_cmd:
-        print "[*] --coverage-cmd must contain AFL_FILE"
-        return 0
-
     if cargs.code_dir:
         if not os.path.exists(cargs.code_dir):
             print "[*] --code-dir path does not exist"
@@ -504,7 +530,7 @@ def validate_args(cargs):
             return 0
 
     if cargs.func_search or cargs.line_search:
-        if '()' not in cargs.func_search:
+        if cargs.func_search and '()' not in cargs.func_search:
             cargs.func_search += '()'
         if not cargs.verbose and not cargs.coverage_cmd:
             cargs.quiet = 1
@@ -512,7 +538,8 @@ def validate_args(cargs):
             print "[*] Must set --src-file in --line-search mode"
             return 0
 
-    if not cargs.disable_coverage_init and create_cov_dirs:
+    if not cargs.disable_coverage_init \
+            and create_cov_dirs and cargs.coverage_cmd:
         ### reset code coverage counters
         run_cmd("lcov --rc lcov_branch_coverage=1 " \
                 + "--no-checksum --zerocounters --directory " \

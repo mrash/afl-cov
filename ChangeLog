@@ -3,7 +3,10 @@ afl-cov-0.2 (05//2015):
       mode. This closes issue #4 on github.
     - Default to not preserving all lcov files - just keep the final one that
       contains all cumulative coverage results. This behavior can be changed
-      with the --preserve-all-lcov-file argument.
+      with the --preserve-all-lcov-files argument.
+    - In --func-search or --line-search mode, if an existing
+      fuzzing-dir/cov/diff/ directory exists then parse the diff files
+      directly for function/line matches.
 
 afl-cov-0.1 (05/09/2015):
     - Initial release
