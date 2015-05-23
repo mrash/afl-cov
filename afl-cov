@@ -91,9 +91,12 @@ def main():
                     % (len(new_files), (cargs.afl_fuzzing_dir + '/queue'))
 
         for f in new_files:
+
+            curr_cycle = get_cycle_num(file_num-1, cargs)
+
             if cargs.verbose or not cargs.quiet:
-                print "[+] AFL file: %s (%d / %d)" \
-                        % (os.path.basename(f), file_num, tot_files)
+                print "[+] AFL file: %s (%d / %d), cycle: %d" \
+                        % (os.path.basename(f), file_num, tot_files, curr_cycle)
 
             if not cargs.live:
                 if file_num == tot_files:
@@ -120,7 +123,7 @@ def main():
                 if found:
                     skip_search = 1
                 if coverage_diff(cargs, cov_paths, \
-                        prev_file, f, is_final, skip_search):
+                        prev_file, f, is_final, curr_cycle, skip_search):
                     if cargs.func_search or cargs.line_search:
                         found = 1
                         if not (cargs.func_search and cargs.line_search) \
@@ -159,7 +162,7 @@ def main():
 
     return es
 
-def coverage_diff(cargs, cov_paths, a, b, is_final, skip_search):
+def coverage_diff(cargs, cov_paths, a, b, is_final, curr_cycle, skip_search):
 
     found     = 0
     do_search = 0
@@ -174,12 +177,13 @@ def coverage_diff(cargs, cov_paths, a, b, is_final, skip_search):
     if do_search and not cargs.coverage_cmd:
         ### we are only search any existing coverage files in this case
         if os.path.exists(cov_paths['diff']):
-            return search_diff(cov_paths, cargs)
+            return search_diff(cov_paths, curr_cycle, cargs)
         else:
             return 0
 
     (old_coverage, search_rv) \
-            = extract_coverage(cov_paths['prev_lcov_info_final'], do_search, cargs)
+            = extract_coverage(cov_paths['prev_lcov_info_final'],
+                    do_search, curr_cycle, cargs)
 
     ### with the coverage from the previous lcov results extracted,
     ### we remove that file unless instructed to keep it
@@ -193,7 +197,8 @@ def coverage_diff(cargs, cov_paths, a, b, is_final, skip_search):
         do_search = 0
 
     (new_coverage, search_rv) \
-            = extract_coverage(cov_paths['lcov_info_final'], do_search, cargs)
+            = extract_coverage(cov_paths['lcov_info_final'],
+                    do_search, curr_cycle, cargs)
 
     if search_rv:
         found = 1
@@ -244,7 +249,7 @@ def zero_cov_final(path, lpath):
         os.symlink(path, lpath)
     return
 
-def extract_coverage(lcov_file, do_search, cargs):
+def extract_coverage(lcov_file, do_search, curr_cycle, cargs):
 
     search_rv = 0
     coverage  = {}
@@ -280,12 +285,12 @@ def extract_coverage(lcov_file, do_search, cargs):
                         if cargs.func_search and fcn == cargs.func_search:
                             if cargs.src_file:
                                 if cargs.src_file == current_file:
-                                    print "[+] Function '%s' in file: '%s' executed by: %s" \
-                                            % (fcn, current_file, id_file)
+                                    print "[+] Function '%s' in file: '%s' executed by: '%s', cycle: %d" \
+                                            % (fcn, current_file, id_file, curr_cycle)
                                     search_rv = 1
                             else:
-                                print "[+] Function '%s' executed by: %s" \
-                                        % (fcn, id_file)
+                                print "[+] Function '%s' executed by: '%s', cycle: %d" \
+                                        % (fcn, id_file, curr_cycle)
                                 search_rv = 1
                     continue
 
@@ -301,27 +306,45 @@ def extract_coverage(lcov_file, do_search, cargs):
                         if cargs.src_file == current_file \
                                 and cargs.line_search and lnum == cargs.line_search:
                             if cargs.src_file == current_file:
-                                print "[+] Line '%s' in file: '%s' executed by: %s" \
-                                        % (lnum, current_file, id_file)
+                                print "[+] Line '%s' in file: '%s' executed by: '%s', cycle: %d" \
+                                        % (lnum, current_file, id_file, curr_cycle)
                                 search_rv = 1
 
     return coverage, search_rv
 
-def search_diff(cov_paths, cargs):
+def search_diff(cov_paths, curr_cycle, cargs):
     found = 0
     with open(cov_paths['diff'], 'r') as f:
         for line in f:
             line = line.strip()
             ### cargs.func_search includes the closing '()'
             if cargs.func_search and cargs.func_search in line:
-                print "[+] Function '%s' executed by: '%s'" \
-                        % (cargs.func_search, cov_paths['id_file'])
+                print "[+] Function '%s' executed by: '%s', cycle: %d" \
+                        % (cargs.func_search, cov_paths['id_file'], curr_cycle)
                 found = 1
             if cargs.line_search and line.split()[-1] == cargs.line_search:
-                print "[+] Line '%s' in file: '%s' executed by: '%s'" \
-                        % (cargs.line_search, cargs.src_file, cov_paths['id_file'])
+                print "[+] Line '%s' in file: '%s' executed by: '%s', cycle: %d" \
+                        % (cargs.line_search, cargs.src_file, \
+                        cov_paths['id_file'], curr_cycle)
                 found = 1
     return found
+
+def get_cycle_num(id_num, cargs):
+
+    cycle_num = -1
+    if not os.path.exists(cargs.afl_fuzzing_dir + '/plot_data'):
+        return cycle_num
+
+    with open(cargs.afl_fuzzing_dir + '/plot_data') as f:
+        for line in f:
+            ### unix_time, cycles_done, cur_path, paths_total, pending_total,...
+            ### 1427742641, 11, 54, 419, 45, 0, 2.70%, 0, 0, 9, 1645.47
+            vals = line.split(', ')
+            ### test the id number against the current path
+            if vals[2] == str(id_num):
+                cycle_num = int(vals[1])
+                break
+    return cycle_num
 
 def gen_coverage(cargs, cov_paths, afl_file, is_final):
 

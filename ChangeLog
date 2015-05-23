@@ -7,6 +7,7 @@ afl-cov-0.2 (05//2015):
     - In --func-search or --line-search mode, if an existing
       fuzzing-dir/cov/diff/ directory exists then parse the diff files
       directly for function/line matches.
+    - Track and display AFL cycle number for each queue/id:NNNNNN* file.
 
 afl-cov-0.1 (05/09/2015):
     - Initial release
