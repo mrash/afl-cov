@@ -203,8 +203,8 @@ Here is an example where the first test case that executes the function
 produced in the main workflow above):
 
 ```bash
-./afl-cov -d /path/to/afl-fuzz-output  --func-search "validate_cmd_msg"
-[+] Function 'validate_cmd_mag()' executed by: id:000002,orig:somestr384.start id:000003,orig:somestr.start
+./afl-cov -d /path/to/afl-fuzz-output --func-search "validate_cmd_msg"
+[+] Function 'validate_cmd_mag()' executed by: id:000002,orig:somestr384.start
 ```
 
 ## Directory Structure
