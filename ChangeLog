@@ -1,4 +1,9 @@
 afl-cov-0.2 (05//2015):
+    - Replace the fuzzing-dir/cov/zero-cov/ directory with a single file
+      at the same path fuzzing-dir/cov/zero-cov that lists all
+      functions/lines that are never executed by any AFL test case.
+    - Add the fuzzing-dir/cov/pos-cov file that lists all functions/lines
+      that are executed at least once by an AFL test case.
     - Use the 'fuzzer_stats' file for acquiring the afl-fuzz PID in --live
       mode. This closes issue #4 on github.
     - Default to not preserving all lcov files - just keep the final one that
@@ -7,7 +12,7 @@ afl-cov-0.2 (05//2015):
     - In --func-search or --line-search mode, if an existing
       fuzzing-dir/cov/diff/ directory exists then parse the diff files
       directly for function/line matches.
-    - Track and display AFL cycle number for each queue/id:NNNNNN* file.
+    - Track and display the AFL cycle number for each queue/id:NNNNNN* file.
 
 afl-cov-0.1 (05/09/2015):
     - Initial release

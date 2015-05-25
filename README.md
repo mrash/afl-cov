@@ -46,7 +46,7 @@ say, within a git repository on one system, and coverage results are produced
 on a different system. However, most workflows typically focus on producing
 `afl-cov` results quickly for current fuzzing runs on the same system.
 
-## WorkFlow
+## Workflow
 At a high level, the general workflow for `afl-cov` is:
 
 1. Create a spare copy of the project sources compiled with gcov profiling support.
@@ -207,17 +207,22 @@ produced in the main workflow above):
 [+] Function 'validate_cmd_mag()' executed by: id:000002,orig:somestr384.start
 ```
 
-## Directory Structure
-`afl-cov` creates a few directories for coverage results within the specified
-`afl-fuzz` directory (`-d`). These directories are displayed below, and all
-are contained within the `/path/to/afl-fuzz-output/cov/` directory:
+## Directory / File Structure
+`afl-cov` creates a few files and directories for coverage results within the
+specified `afl-fuzz` directory (`-d`). These files and directories are
+displayed below, and all are contained within the main
+`/path/to/afl-fuzz-output/cov/` directory:
 
  * `cov/diff/` - contains new code coverage results when `queue/id:NNNNNN*` file
                  causes `afl-fuzz` to execute new code.
  * `cov/lcov/` - contains raw code coverage data produced by the lcov front-end to gcov.
  * `cov/web/`  - contains code coverage results in web format produced by `genhtml`.
- * `cov/zero-cov/` - contains data for each `queue/id:NNNNNN*` on functions (and
-                     optionally lines) that are never executed by `afl-fuzz`.
+ * `cov/zero-cov` - file that lists all functions (and optionally lines) that are never
+                    executed by any `afl-fuzz` test case.
+ * `cov/pos-cov` - file that lists all functions (and optionally lines) that are
+                    executed at least once by an `afl-fuzz` test case.
+ * `cov/per-file-cov` - lists all `afl-fuzz` test cases along with the functions (and
+                        optionally lines) that are executed under each test case.
 
 ## Usage Information
 Basic `--help` output appears below:
