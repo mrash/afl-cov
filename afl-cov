@@ -49,6 +49,7 @@ def main():
     afl_files    = []
     prev_file    = ''
     cov_paths    = {}
+    gcov         = {}
     file_num     = 1
     tot_files    = 0
     es           = exit_success
@@ -59,7 +60,12 @@ def main():
         print "afl-cov-" + version
         return exit_success
 
-    if not validate_args(cargs):
+    (gpaths, rv) = global_paths(cargs)
+
+    if not rv:
+        return exit_failure
+
+    if not validate_args(gpaths, cargs):
         return exit_failure
 
     while True:
@@ -105,7 +111,7 @@ def main():
                         and file_num > cargs.afl_queue_id_limit-1:
                     is_final = 1
 
-            cov_paths = gen_paths(cargs, prev_file, f)
+            cov_paths = gen_paths(prev_file, f, gpaths, cargs)
 
             if cargs.coverage_cmd:
                 ### execute the command to generate code coverage stats
@@ -116,19 +122,24 @@ def main():
                 ### collect the code coverage stats
                 gen_coverage(cargs, cov_paths, f, is_final)
 
-            ### diff to the previous code coverage and look for
-            ### new lines/functions
-            if file_num > 1:
-                skip_search = 0
-                if found:
-                    skip_search = 1
-                if coverage_diff(cargs, cov_paths, \
-                        prev_file, f, is_final, curr_cycle, skip_search):
-                    if cargs.func_search or cargs.line_search:
-                        found = 1
-                        if not (cargs.func_search and cargs.line_search) \
-                                and not cargs.coverage_cmd:
-                            break
+                ### extract and write out the coverage result for this
+                ### id:NNNNNN* test case
+                append_id_delta_cov(gcov, curr_cycle, cov_paths, gpaths, cargs)
+
+                ### diff to the previous code coverage and look for
+                ### new lines/functions
+                if file_num > 1:
+                    skip_search = 0
+                    if found:
+                        skip_search = 1
+
+                    coverage_diff(cov_paths, gpaths, prev_file, f, is_final, cargs)
+
+#                        if cargs.func_search or cargs.line_search:
+#                            found = 1
+#                            if not (cargs.func_search and cargs.line_search) \
+#                                    and not cargs.coverage_cmd:
+#                                break
 
             prev_file = f
             file_num += 1
@@ -161,46 +172,22 @@ def main():
 
     return es
 
-def coverage_diff(cargs, cov_paths, a, b, is_final, curr_cycle, skip_search):
-
-    found     = 0
-    do_search = 0
+def coverage_diff(cov_paths, gpaths, a, b, is_final, cargs):
 
     if cargs.verbose or not cargs.quiet:
         print "[+] Coverage diff %s %s" \
                 % (os.path.basename(a), os.path.basename(b))
 
-    if not skip_search and cargs.func_search or cargs.line_search:
-        do_search = 1
-
-    if do_search and not cargs.coverage_cmd:
-        ### we are only searching any existing coverage files in this case
-        if os.path.exists(cov_paths['diff']):
-            return search_diff(cov_paths, curr_cycle, cargs)
-        else:
-            return 0
-
-    (old_zero_cov, old_pos_cov, search_rv) \
-            = extract_coverage(cov_paths['prev_lcov_info_final'],
-                    do_search, curr_cycle, cargs)
+    (old_zero_cov, old_pos_cov) \
+            = extract_coverage(cov_paths['prev_lcov_info_final'], cargs)
 
     ### with the coverage from the previous lcov results extracted,
     ### we remove associated files unless instructed to keep it
     if not cargs.preserve_all_lcov_files:
         rm_prev_cov_files(cov_paths)
 
-    if search_rv:
-        ### don't search for the function/line again since we just
-        ### found it
-        found = 1
-        do_search = 0
-
-    (new_zero_cov, new_pos_cov, search_rv) \
-            = extract_coverage(cov_paths['lcov_info_final'],
-                    do_search, curr_cycle, cargs)
-
-    if search_rv:
-        found = 1
+    (new_zero_cov, new_pos_cov) \
+            = extract_coverage(cov_paths['lcov_info_final'], cargs)
 
     ### diff the two dictionaries
     for f in old_zero_cov:
@@ -219,8 +206,8 @@ def coverage_diff(cargs, cov_paths, a, b, is_final, curr_cycle, skip_search):
 
     ### write out the final zero coverage and postive coverage results
     if is_final:
-        print "[+] Final zero coverage report in: %s" % cov_paths['zero_cov']
-        cfile = open(cov_paths['zero_cov'], 'w')
+        print "[+] Final zero coverage report in: %s" % gpaths['zero_cov']
+        cfile = open(gpaths['zero_cov'], 'w')
         for f in new_zero_cov:
             cfile.write("[+] File: %s\n" % f)
             for ctype in sorted(new_zero_cov[f]):
@@ -233,8 +220,8 @@ def coverage_diff(cargs, cov_paths, a, b, is_final, curr_cycle, skip_search):
                             cfile.write("    %s: %s\n" % (ctype, val))
         cfile.close()
 
-        print "[+] Final positive coverage report in: %s" % cov_paths['pos_cov']
-        pfile = open(cov_paths['pos_cov'], 'w')
+        print "[+] Final positive coverage report in: %s" % gpaths['pos_cov']
+        pfile = open(gpaths['pos_cov'], 'w')
         for f in new_pos_cov:
             pfile.write("[+] File: %s\n" % f)
             for ctype in sorted(new_pos_cov[f]):
@@ -247,7 +234,7 @@ def coverage_diff(cargs, cov_paths, a, b, is_final, curr_cycle, skip_search):
                             pfile.write("    %s: %s\n" % (ctype, val))
         pfile.close()
 
-    return found
+    return
 
 def rm_prev_cov_files(cov_paths):
     os.remove(cov_paths['prev_lcov_base'])
@@ -255,15 +242,45 @@ def rm_prev_cov_files(cov_paths):
     os.remove(cov_paths['prev_lcov_info_final'])
     return
 
-def extract_coverage(lcov_file, do_search, curr_cycle, cargs):
+def append_id_delta_cov(gcov, curr_cycle, cov_paths, gpaths, cargs):
+
+    pos_cov = extract_coverage(cov_paths['lcov_info_final'], cargs)[1]
+
+    cfile = open(gpaths['id_delta_cov'], 'a')
+    for f in pos_cov:
+        if f not in gcov:
+            cov_init(f, gcov)
+        for ctype in sorted(pos_cov[f]):
+            if ctype == 'function':
+                for val in sorted(pos_cov[f][ctype]):
+                    if val not in gcov[f][ctype]:
+                        gcov[f][ctype][val] = ''
+                        cfile.write("%s, %s, %s, %s, %s\n" \
+                                % (cov_paths['id_file'],
+                                    curr_cycle, f, ctype, val))
+            elif ctype == 'line':
+                if cargs.coverage_include_lines:
+                    for val in sorted(pos_cov[f][ctype], key=int):
+                        if val not in gcov[f][ctype]:
+                            gcov[f][ctype][val] = ''
+                            cfile.write("%s, %s, %s, %s, %s\n" \
+                                    % (cov_paths['id_file'],
+                                        curr_cycle, f, ctype, val))
+    cfile.close()
+
+    return
+
+def cov_init(cfile, cov):
+    cov[cfile] = {}
+    cov[cfile]['function'] = {}
+    cov[cfile]['line'] = {}
+    return
+
+def extract_coverage(lcov_file, cargs):
 
     search_rv = 0
-    zero_cov = {}
-    pos_cov  = {}
-
-    if do_search:
-        id_file = string.replace(os.path.basename(lcov_file),
-                '.lcov_info_final', '')
+    zero_cov  = {}
+    pos_cov   = {}
 
     ### populate old lcov output for functions/lines that were called
     ### zero times
@@ -275,12 +292,8 @@ def extract_coverage(lcov_file, do_search, curr_cycle, cargs):
             m = re.search('SF:(\S+)', line)
             if m and m.group(1):
                 current_file = m.group(1)
-                zero_cov[current_file] = {}
-                zero_cov[current_file]['function'] = {}
-                zero_cov[current_file]['line'] = {}
-                pos_cov[current_file] = {}
-                pos_cov[current_file]['function'] = {}
-                pos_cov[current_file]['line'] = {}
+                cov_init(current_file, zero_cov)
+                cov_init(current_file, pos_cov)
                 continue
 
             if current_file:
@@ -292,18 +305,6 @@ def extract_coverage(lcov_file, do_search, curr_cycle, cargs):
                         zero_cov[current_file]['function'][fcn] = ''
                     else:
                         pos_cov[current_file]['function'][fcn] = ''
-                        if do_search:
-                            ### positive coverage for this function
-                            if cargs.func_search and fcn == cargs.func_search:
-                                if cargs.src_file:
-                                    if cargs.src_file == current_file:
-                                        print "[+] Function '%s' in file: '%s' executed by: '%s', cycle: %d" \
-                                                % (fcn, current_file, id_file, curr_cycle)
-                                        search_rv = 1
-                                else:
-                                    print "[+] Function '%s' executed by: '%s', cycle: %d" \
-                                            % (fcn, id_file, curr_cycle)
-                                    search_rv = 1
                     continue
 
                 ### look for lines that were never called
@@ -315,16 +316,34 @@ def extract_coverage(lcov_file, do_search, curr_cycle, cargs):
                         zero_cov[current_file]['line'][lnum] = ''
                     else:
                         pos_cov[current_file]['line'][lnum] = ''
-                        if do_search:
-                            ### positive coverage for this line
-                            if cargs.src_file == current_file \
-                                    and cargs.line_search and lnum == cargs.line_search:
-                                if cargs.src_file == current_file:
-                                    print "[+] Line '%s' in file: '%s' executed by: '%s', cycle: %d" \
-                                            % (lnum, current_file, id_file, curr_cycle)
-                                    search_rv = 1
 
-    return zero_cov, pos_cov, search_rv
+    return zero_cov, pos_cov
+
+def search_cov(cargs):
+#                        if do_search:
+                            ### positive coverage for this function
+#                            if cargs.func_search and fcn == cargs.func_search:
+#                                if cargs.src_file:
+#                                    if cargs.src_file == current_file:
+#                                        print "[+] Function '%s' in file: '%s' executed by: '%s', cycle: %d" \
+#                                                % (fcn, current_file, id_file, curr_cycle)
+#                                        search_rv = 1
+#                                else:
+#                                    print "[+] Function '%s' executed by: '%s', cycle: %d" \
+#                                            % (fcn, id_file, curr_cycle)
+#                                    search_rv = 1
+
+#                        if do_search:
+                            ### positive coverage for this line
+#                            if cargs.src_file == current_file \
+#                                    and cargs.line_search and lnum == cargs.line_search:
+#                                if cargs.src_file == current_file:
+#                                    print "[+] Line '%s' in file: '%s' executed by: '%s', cycle: %d" \
+#                                            % (lnum, current_file, id_file, curr_cycle)
+#                                    search_rv = 1
+
+
+    return
 
 def search_diff(cov_paths, curr_cycle, cargs):
     found = 0
@@ -441,36 +460,34 @@ def is_afl_fuzz_running(cargs):
 
     return found
 
-def gen_paths(cargs, prev_afl_file, afl_file):
+def gen_paths(prev_afl_file, afl_file, gpaths, cargs):
 
     cov_paths = {}
 
     basename = os.path.basename(afl_file)
 
-    cov_paths['diff'] = cargs.afl_fuzzing_dir + '/cov/diff/' \
-            + basename + '.cov_diff'
-    cov_paths['zero_cov'] = cargs.afl_fuzzing_dir + '/cov/zero-cov'
-    cov_paths['pos_cov']  = cargs.afl_fuzzing_dir + '/cov/pos-cov'
-    cov_paths['lcov_web_dir'] = cargs.afl_fuzzing_dir + '/cov/web/' \
-            + basename
-    cov_paths['lcov_base'] = cargs.afl_fuzzing_dir + '/cov/lcov/' \
-            + basename + '.lcov_base'
-    cov_paths['lcov_info'] = cargs.afl_fuzzing_dir + '/cov/lcov/' \
-            + basename + '.lcov_info'
-    cov_paths['lcov_info_final'] = cargs.afl_fuzzing_dir + '/cov/lcov/' \
-            + basename + '.lcov_info_final'
+    ### coverage diffs from one ID file to the next
+    cov_paths['diff'] = gpaths['diff_dir'] + '/' + basename
+
+    ### current id:NNNNNN* test case file
     cov_paths['id_file'] = basename
 
+    ### web files
+    cov_paths['lcov_web_dir'] = gpaths['web_dir'] + '/' + basename
+
+    ### raw lcov files
+    cov_paths['lcov_base'] = gpaths['lcov_dir'] + '/' + basename + '.lcov_base'
+    cov_paths['lcov_info'] = gpaths['lcov_dir'] + '/' + basename + '.lcov_info'
+    cov_paths['lcov_info_final'] = gpaths['lcov_dir'] + '/' \
+            + basename + '.lcov_info_final'
+
     if prev_afl_file:
-        cov_paths['prev_lcov_base'] = cargs.afl_fuzzing_dir \
-                + '/cov/lcov/' + os.path.basename(prev_afl_file) \
-                + '.lcov_base'
-        cov_paths['prev_lcov_info'] = cargs.afl_fuzzing_dir \
-                + '/cov/lcov/' + os.path.basename(prev_afl_file) \
-                + '.lcov_info'
-        cov_paths['prev_lcov_info_final'] = cargs.afl_fuzzing_dir \
-                + '/cov/lcov/' + os.path.basename(prev_afl_file) \
-                + '.lcov_info_final'
+        cov_paths['prev_lcov_base'] = gpaths['lcov_dir'] + '/' \
+                + os.path.basename(prev_afl_file) + '.lcov_base'
+        cov_paths['prev_lcov_info'] = gpaths['lcov_dir'] + '/' \
+                + os.path.basename(prev_afl_file) + '.lcov_info'
+        cov_paths['prev_lcov_info_final'] = gpaths['lcov_dir'] + \
+                '/' + os.path.basename(prev_afl_file) + '.lcov_info_final'
 
     return cov_paths
 
@@ -499,11 +516,26 @@ def run_cmd(cmd, cargs, collect):
 def import_dir(qdir):
     return sorted(glob.glob(qdir + "/id:*"))
 
-def validate_args(cargs):
+def global_paths(cargs):
+    gpaths = {}
 
     if not cargs.afl_fuzzing_dir:
         print "[*] Must specify AFL fuzzing dir with --afl-fuzzing-dir or -d"
-        return 0
+        return gpaths, 0
+
+    gpaths['top_dir']  = cargs.afl_fuzzing_dir + '/cov'
+    gpaths['web_dir']  = gpaths['top_dir'] + '/web'
+    gpaths['lcov_dir'] = gpaths['top_dir'] + '/lcov'
+    gpaths['diff_dir'] = gpaths['top_dir'] + '/diff'
+
+    ### summary coverage results
+    gpaths['id_delta_cov'] = gpaths['top_dir'] + '/id-delta-cov'
+    gpaths['zero_cov']     = gpaths['top_dir'] + '/zero-cov'
+    gpaths['pos_cov']      = gpaths['top_dir'] + '/pos-cov'
+
+    return gpaths, 1
+
+def validate_args(gpaths, cargs):
 
     if cargs.live:
         while not fuzzing_dir_exists(cargs):
@@ -532,9 +564,9 @@ def validate_args(cargs):
             return 0
 
     create_cov_dirs = 0
-    if os.path.exists(cargs.afl_fuzzing_dir + '/cov'):
+    if os.path.exists(gpaths['top_dir']):
         if cargs.overwrite:
-            rmtree(cargs.afl_fuzzing_dir + '/cov')
+            rmtree(gpaths['top_dir'])
             create_cov_dirs = 1
         else:
             if not cargs.func_search and not cargs.line_search:
@@ -550,10 +582,13 @@ def validate_args(cargs):
                     "against existing afl-cov directory"
             return 0
 
-        os.mkdir(cargs.afl_fuzzing_dir + '/cov')
-        os.mkdir(cargs.afl_fuzzing_dir + '/cov/web')
-        os.mkdir(cargs.afl_fuzzing_dir + '/cov/lcov')
-        os.mkdir(cargs.afl_fuzzing_dir + '/cov/diff')
+        for k in ['top_dir', 'web_dir', 'lcov_dir', 'diff_dir']:
+            os.mkdir(gpaths[k])
+
+        ### write coverage results in the following format
+        cfile = open(gpaths['id_delta_cov'], 'w')
+        cfile.write("# id:NNNNNN*_file, cycle, src_file, coverage_type, fcn/line\n")
+        cfile.close()
 
     if cargs.code_dir:
         if not os.path.exists(cargs.code_dir):

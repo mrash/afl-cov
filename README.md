@@ -221,8 +221,9 @@ displayed below, and all are contained within the main
                     executed by any `afl-fuzz` test case.
  * `cov/pos-cov` - file that lists all functions (and optionally lines) that are
                     executed at least once by an `afl-fuzz` test case.
- * `cov/per-file-cov` - lists all `afl-fuzz` test cases along with the functions (and
-                        optionally lines) that are executed under each test case.
+ * `cov/id-delta-cov` - lists the functions (and optionally lines) that are executed by
+                        the first `id:000000*` test case, and then lists all new
+                        functions/lines executed in subsequent test cases.
 
 ## Usage Information
 Basic `--help` output appears below:
