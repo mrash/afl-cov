@@ -1,4 +1,16 @@
 afl-cov-0.2 (05//2015):
+    - Add the fuzzing-dir/cov/id-delta-cov file which lists all functions and
+      (and optionally lines) that are executed by the first "id:000000*" test
+      case, and then lists all new functions/lines executed in subsequent test
+      cases. In --func-search or --line-search modes, the id-delta-cov file is
+      parsed directly instead of parsing cov/diff/ file output. Here is an
+      example of what the contents of this file looks like:
+
+      # id:NNNNNN*_file, cycle, src_file, coverage_type, fcn/line
+      id:000000,orig:access.conf, 0, proj/log_msg.c, function, free_logging()
+      id:000000,orig:access.conf, 0, proj/log_msg.c, function, init_logging()
+      id:000000,orig:access.conf, 0, proj/log_msg.c, function, log_msg()
+
     - Replace the fuzzing-dir/cov/zero-cov/ directory with a single file
       at the same path fuzzing-dir/cov/zero-cov that lists all
       functions/lines that are never executed by any AFL test case.
@@ -9,9 +21,6 @@ afl-cov-0.2 (05//2015):
     - Default to not preserving all lcov files - just keep the final one that
       contains all cumulative coverage results. This behavior can be changed
       with the --preserve-all-lcov-files argument.
-    - In --func-search or --line-search mode, if an existing
-      fuzzing-dir/cov/diff/ directory exists then parse the diff files
-      directly for function/line matches.
     - Track and display the AFL cycle number for each queue/id:NNNNNN* file.
 
 afl-cov-0.1 (05/09/2015):
