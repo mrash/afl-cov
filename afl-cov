@@ -147,8 +147,8 @@ def main():
         print "[+] Processed id:%d / %d files.\n" % (file_num-1, tot_files)
 
     ### write the final zero coverage and positive coverage reports
-    write_zero_cov(gpaths, zero_cov, cargs)
-    write_pos_cov(gpaths, gcov, cargs)
+    write_zero_cov(gpaths['zero_cov'], zero_cov, cargs)
+    write_pos_cov(gpaths['pos_cov'], gcov, cargs)
 
     if not cargs.disable_lcov_web:
         gen_web_cov_report(gpaths, cov_paths, cargs)
@@ -201,40 +201,39 @@ def coverage_diff(cov_paths, gpaths, a, b, cargs):
 
     return new_zero_cov
 
-def write_zero_cov(gpaths, zero_cov, cargs):
-    print "[+] Final zero coverage report in: %s" % gpaths['zero_cov']
-    cfile = open(gpaths['zero_cov'], 'w')
+def write_zero_cov(cpath, zero_cov, cargs):
+    print "[+] Final zero coverage report in: %s" % cpath
+    cfile = open(cpath, 'w')
     cfile.write("# All functions / lines in this file were never executed by any\n")
     cfile.write("# AFL test case.\n")
-    for f in zero_cov:
-        cfile.write("[-] File: %s\n" % f)
-        for ctype in sorted(zero_cov[f]):
-            if ctype == 'function':
-                for val in sorted(zero_cov[f][ctype]):
-                    cfile.write("    %s: %s\n" % (ctype, val))
-            elif ctype == 'line':
-                if cargs.coverage_include_lines:
-                    for val in sorted(zero_cov[f][ctype], key=int):
-                        cfile.write("    %s: %s\n" % (ctype, val))
     cfile.close()
+    write_cov(cpath, zero_cov, cargs)
+    return
 
-def write_pos_cov(gpaths, gcov, cargs):
-    print "[+] Final positive coverage report in: %s" % gpaths['pos_cov']
-    cfile = open(gpaths['pos_cov'], 'w')
+def write_pos_cov(cpath, gcov, cargs):
+    print "[+] Final positive coverage report in: %s" % cpath
+    cfile = open(cpath, 'w')
     cfile.write("# All functions / lines in this file were executed by at\n")
     cfile.write("# least one AFL test case. See the cov/id-delta-cov file\n")
     cfile.write("# for more information.\n")
-    for f in gcov:
-        cfile.write("[+] File: %s\n" % f)
-        for ctype in sorted(gcov[f]):
+    cfile.close()
+    write_cov(cpath, gcov, cargs)
+    return
+
+def write_cov(cpath, cov, cargs):
+    cfile = open(cpath, 'a')
+    for f in cov:
+        cfile.write("File: %s\n" % f)
+        for ctype in sorted(cov[f]):
             if ctype == 'function':
-                for val in sorted(gcov[f][ctype]):
+                for val in sorted(cov[f][ctype]):
                     cfile.write("    %s: %s\n" % (ctype, val))
             elif ctype == 'line':
                 if cargs.coverage_include_lines:
-                    for val in sorted(gcov[f][ctype], key=int):
+                    for val in sorted(cov[f][ctype], key=int):
                         cfile.write("    %s: %s\n" % (ctype, val))
     cfile.close()
+
     return
 
 def rm_prev_cov_files(cov_paths):
