@@ -202,7 +202,7 @@ def coverage_diff(cov_paths, gpaths, a, b, cargs):
     return new_zero_cov
 
 def write_zero_cov(cpath, zero_cov, cargs):
-    print "[+] Final zero coverage report in: %s" % cpath
+    print "[+] Final zero coverage report: %s" % cpath
     cfile = open(cpath, 'w')
     cfile.write("# All functions / lines in this file were never executed by any\n")
     cfile.write("# AFL test case.\n")
@@ -211,7 +211,7 @@ def write_zero_cov(cpath, zero_cov, cargs):
     return
 
 def write_pos_cov(cpath, gcov, cargs):
-    print "[+] Final positive coverage report in: %s" % cpath
+    print "[+] Final positive coverage report: %s" % cpath
     cfile = open(cpath, 'w')
     cfile.write("# All functions / lines in this file were executed by at\n")
     cfile.write("# least one AFL test case. See the cov/id-delta-cov file\n")
