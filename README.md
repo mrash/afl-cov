@@ -1,4 +1,4 @@
-# afl-cov - AFL Code Coverage
+# afl-cov - AFL Fuzzing Code Coverage
 
 ## Introduction
 `afl-cov` uses test case files produced by the AFL fuzzer (see:
