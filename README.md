@@ -163,10 +163,12 @@ $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
 .
 .
 .
-[+] Generating lcov web report in: /path/to/afl-fuzz-output/cov/web/lcov-web-final
 [+] Coverage diff id:000182,src:000000,op:havoc,rep:64 id:000184,src:000000,op:havoc,rep:4
-[+] Final zero coverage report in: /path/to/afl-fuzz-output/cov/zero-cov/zero-cov-final
 [+] Processed 184 / 184 files
+
+[+] Final zero coverage report: /path/to/afl-fuzz-output/cov/zero-cov
+[+] Final positive coverage report: /path/to/afl-fuzz-output/cov/pos-cov
+[+] Final lcov web report: /path/to/afl-fuzz-output/cov/web/lcov-web-final.html
 ```
 
 In the last few lines above, the locations of the final web coverage and zero
@@ -176,7 +178,14 @@ that were never executed across the entire `afl-fuzz` run.
 The code coverage results in `/path/to/afl-fuzz-output/cov/web/lcov-web-final`
 represent cumulative code coverage across all AFL test cases. This data can then
 be reviewed to ensure that all expected functions are indeed exercised by AFL -
-just point a web browser at `/path/to/afl-fuzz-output/cov/web/lcov-web-final/index.html`
+just point a web browser at `/path/to/afl-fuzz-output/cov/web/lcov-web-final.html`.
+Here is a sample of what this report looks like for a cumulative AFL fuzzing run
+(this is against the fwknop project, and the full report is
+[available here](https://www.cipherdyne.org/fwknop/2.6.7-afl-lcov-results/)):
+
+![alt text][AFL-lcov-web-report]
+
+[AFL-lcov-web-report]: https://github.com/mrash/afl-cov/raw/master/doc/AFL_lcov_web_report.png "AFL lcov web report"
 
 ### Other Examples
 The workflow above is probably the main strategy for using `afl-cov`. However,
@@ -203,8 +212,17 @@ Here is an example where the first test case that executes the function
 produced in the main workflow above):
 
 ```bash
-./afl-cov -d /path/to/afl-fuzz-output --func-search "validate_cmd_msg"
+$ ./afl-cov -d /path/to/afl-fuzz-output --func-search "validate_cmd_msg"
 [+] Function 'validate_cmd_mag()' executed by: id:000002,orig:somestr384.start
+```
+
+An equivalent way of searching the coverage results is to just `grep` the function
+from the `cov/id-delta-cov` file described below. Note the number _3_ in the output
+below is the AFL cycle number where the function is first executed:
+
+```bash
+$ grep validate_cmd_msg /path/to/afl-fuzz-output/cov/id-delta-cov
+id:000002,orig:somestr384.start, 3, /path/to/project-gcov/file.c, function, validate_cmd_msg()
 ```
 
 ## Directory / File Structure
@@ -220,7 +238,7 @@ displayed below, and all are contained within the main
  * `cov/zero-cov` - file that lists all functions (and optionally lines) that are never
                     executed by any `afl-fuzz` test case.
  * `cov/pos-cov` - file that lists all functions (and optionally lines) that are
-                    executed at least once by an `afl-fuzz` test case.
+                   executed at least once by an `afl-fuzz` test case.
  * `cov/id-delta-cov` - lists the functions (and optionally lines) that are executed by
                         the first `id:000000*` test case, and then lists all new
                         functions/lines executed in subsequent test cases.
