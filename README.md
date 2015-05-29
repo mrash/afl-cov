@@ -58,9 +58,8 @@ Now, in more detail:
 * Copy the project sources to two different directories
 `/path/to/afl-fuzz-output/` and `/path/to/project-gcov/`. The first
 will contain the project binaries compiled for AFL fuzzing, and the second will
-contain the project binaries compiled for gcov profiling support. For the
-`/path/to/project-gcov/` directory, compile the project with gcov profiling
-support (gcc `-fprofile-arcs -ftest-coverage`).
+contain the project binaries compiled for gcov profiling support
+(gcc `-fprofile-arcs -ftest-coverage`).
 
 * Start up `afl-cov` in `--live` mode before also starting the `afl-fuzz`
 fuzzing cycle. The command line arguments to `afl-cov` must specify the path to
@@ -117,11 +116,11 @@ Here is a sample of what the `afl-cov` output looks like:
 $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
 "LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f AFL_FILE -a -b -c" --code-dir .
 [+] Imported 184 files from: /path/to/afl-fuzz-output/queue
-[+] AFL file: id:000000,orig:somestr.start (1 / 184)
+[+] AFL file: id:000000,orig:somestr.start (1 / 184), cycle: 0
     lines......: 18.6% (1122 of 6032 lines)
     functions..: 30.7% (100 of 326 functions)
     branches...: 14.0% (570 of 4065 branches)
-[+] AFL file: id:000001,orig:somestr256.start (2 / 184)
+[+] AFL file: id:000001,orig:somestr256.start (2 / 184), cycle: 2
     lines......: 18.7% (1127 of 6032 lines)
     functions..: 30.7% (100 of 326 functions)
     branches...: 14.1% (572 of 4065 branches)
@@ -133,7 +132,7 @@ $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
     Src file: /path/to/project-gcov/lib/proj_util.c
       New 'line' coverage: 217
       New 'line' coverage: 218
-[+] AFL file: id:000002,orig:somestr384.start (3 / 184)
+[+] AFL file: id:000002,orig:somestr384.start (3 / 184), cycle: 10
     lines......: 18.8% (1132 of 6032 lines)
     functions..: 30.7% (100 of 326 functions)
     branches...: 14.1% (574 of 4065 branches)
@@ -145,7 +144,7 @@ $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
     Src file: /path/to/project-gcov/lib/proj_util.c
       New 'line' coverage: 220
       New 'line' coverage: 221
-[+] AFL file: id:000003,orig:somestr.start (4 / 184)
+[+] AFL file: id:000003,orig:somestr.start (4 / 184), cycle: 5
     lines......: 18.9% (1141 of 6032 lines)
     functions..: 31.0% (101 of 326 functions)
     branches...: 14.3% (581 of 4065 branches)
@@ -217,7 +216,7 @@ $ ./afl-cov -d /path/to/afl-fuzz-output --func-search "validate_cmd_msg"
 ```
 
 An equivalent way of searching the coverage results is to just `grep` the function
-from the `cov/id-delta-cov` file described below. Note the number _3_ in the output
+from the `cov/id-delta-cov` file described below. Note the number _"3"_ in the output
 below is the AFL cycle number where the function is first executed:
 
 ```bash
