@@ -1,4 +1,4 @@
-afl-cov-0.2 (05//2015):
+afl-cov-0.2 (05/28/2015):
     - Add the fuzzing-dir/cov/id-delta-cov file which lists all functions and
       (and optionally lines) that are executed by the first "id:000000*" test
       case, and then lists all new functions/lines executed in subsequent test
