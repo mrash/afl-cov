@@ -28,6 +28,7 @@
 #
 
 from shutil import rmtree
+from sys import argv
 import errno
 import re
 import subprocess
@@ -68,6 +69,8 @@ def main():
 
     if not validate_args(gpaths, cargs):
         return exit_failure
+
+    write_status(version, cargs)
 
     while True:
 
@@ -240,6 +243,14 @@ def rm_prev_cov_files(cov_paths):
     os.remove(cov_paths['prev_lcov_base'])
     os.remove(cov_paths['prev_lcov_info'])
     os.remove(cov_paths['prev_lcov_info_final'])
+    return
+
+def write_status(version, cargs):
+    f = open(cargs.afl_fuzzing_dir + '/cov/afl_cov_status', 'w')
+    f.write("afl_cov_pid     : %d\n" % os.getpid())
+    f.write("afl_cov_version : %s\n" % version)
+    f.write("command_line    : %s\n" % ' '.join(argv))
+    f.close()
     return
 
 def append_id_delta_cov(gcov, curr_cycle, cov_paths, gpaths, cargs):
