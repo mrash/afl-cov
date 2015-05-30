@@ -360,23 +360,6 @@ def search_cov(gpaths, cargs):
 
     return search_rv
 
-def search_diff(cov_paths, curr_cycle, cargs):
-    found = 0
-    with open(cov_paths['diff'], 'r') as f:
-        for line in f:
-            line = line.strip()
-            ### cargs.func_search includes the closing '()'
-            if cargs.func_search and cargs.func_search in line:
-                print "[+] Function '%s' executed by: '%s', cycle: %d" \
-                        % (cargs.func_search, cov_paths['id_file'], curr_cycle)
-                found = 1
-            if cargs.line_search and line.split()[-1] == cargs.line_search:
-                print "[+] Line '%s' in file: '%s' executed by: '%s', cycle: %d" \
-                        % (cargs.line_search, cargs.src_file, \
-                        cov_paths['id_file'], curr_cycle)
-                found = 1
-    return found
-
 def get_cycle_num(id_num, cargs):
 
     cycle_num = -1
