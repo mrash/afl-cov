@@ -188,19 +188,26 @@ def coverage_diff(cov_paths, gpaths, a, b, cargs):
             = extract_coverage(cov_paths['lcov_info_final'], cargs)
 
     ### diff the two dictionaries
+    printed_diff_header = 0
     for f in old_zero_cov:
         printed_file = 0
         if f in new_zero_cov:
             for ctype in old_zero_cov[f]:
                 for val in sorted(old_zero_cov[f][ctype]):
                     if val not in new_zero_cov[f][ctype]:
+                        if not printed_diff_header:
+                            pstr = "diff %s -> %s" % (os.path.basename(a),
+                                    os.path.basename(b))
+                            tee_print(pstr, cov_paths['diff'])
+                            printed_diff_header = 1
                         if not printed_file:
                             if cargs.verbose or not cargs.quiet:
-                                tee_print("    Src file: " + f, cov_paths['diff'])
+                                pstr = "Src file: " + f
+                                tee_print(pstr, cov_paths['diff'])
                             printed_file = 1
                         if cargs.verbose or not cargs.quiet:
-                            tee_print("      New '" + ctype + "' coverage: " + val,
-                                    cov_paths['diff'])
+                            pstr = "  New '" + ctype + "' coverage: " + val
+                            tee_print(pstr, cov_paths['diff'])
 
     return new_zero_cov
 
@@ -613,7 +620,7 @@ def fuzzing_dir_exists(cargs):
     return 1
 
 def tee_print(pstr, pfile):
-    print pstr
+    print "    " + pstr
     f = open(pfile, 'a')
     f.write("%s\n" % pstr)
     f.close()
