@@ -84,7 +84,7 @@ def main():
         if cargs.live:
             if is_afl_fuzz_running(cargs):
                 if not len(new_files):
-                    print "[-] No new AFL queue files, sleeping for %d seconds" \
+                    print "[-] No new AFL test cases, sleeping for %d seconds" \
                             % cargs.sleep
                     time.sleep(cargs.sleep)
                     continue
@@ -93,7 +93,7 @@ def main():
                 break
 
         if cargs.verbose or not cargs.quiet:
-            print "[+] Imported %d files from: %s" \
+            print "\n*** Imported %d new test cases from: %s\n" \
                     % (len(new_files), (cargs.afl_fuzzing_dir + '/queue'))
 
         for f in new_files:
@@ -101,7 +101,7 @@ def main():
             curr_cycle = get_cycle_num(file_num, cargs)
 
             if cargs.verbose or not cargs.quiet:
-                print "[+] AFL file: %s (%d / %d), cycle: %d" \
+                print "[+] AFL test case: %s (%d / %d), cycle: %d" \
                         % (os.path.basename(f), file_num, len(afl_files),
                                 curr_cycle)
 
@@ -146,7 +146,7 @@ def main():
             break
 
     if cargs.verbose or not cargs.quiet:
-        print "[+] Processed id:%d / %d files.\n" % (file_num-1, len(afl_files))
+        print "[+] Processed id:%d / %d test cases.\n" % (file_num-1, len(afl_files))
 
     ### write the final zero coverage and positive coverage reports
     write_zero_cov(gpaths['zero_cov'], zero_cov, cargs)
@@ -192,7 +192,7 @@ def coverage_diff(cov_paths, gpaths, a, b, cargs):
                     if val not in new_zero_cov[f][ctype]:
                         if not printed_diff_header:
                             if cargs.verbose or not cargs.quiet:
-                                print "[+] Coverage diff %s %s" \
+                                print "\n    Coverage diff %s %s" \
                                         % (os.path.basename(a),
                                                 os.path.basename(b))
                             pstr = "diff %s -> %s" % (os.path.basename(a),
@@ -207,6 +207,9 @@ def coverage_diff(cov_paths, gpaths, a, b, cargs):
                         if cargs.verbose or not cargs.quiet:
                             pstr = "  New '" + ctype + "' coverage: " + val
                             tee_print(pstr, cov_paths['diff'])
+
+    if printed_diff_header:
+        print
 
     return new_zero_cov
 
@@ -368,7 +371,9 @@ def search_cov(gpaths, cargs):
 
 def get_cycle_num(id_num, cargs):
 
-    cycle_num = -1
+    ### default cycle
+    cycle_num = 0
+
     if not os.path.exists(cargs.afl_fuzzing_dir + '/plot_data'):
         return cycle_num
 
@@ -381,6 +386,7 @@ def get_cycle_num(id_num, cargs):
             if vals[2] == str(id_num):
                 cycle_num = int(vals[1])
                 break
+
     return cycle_num
 
 def gen_coverage(gpaths, cov_paths, afl_file, cargs):
