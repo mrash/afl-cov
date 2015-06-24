@@ -53,7 +53,6 @@ def main():
     gcov         = {}
     zero_cov     = {}
     file_num     = 0
-    tot_files    = 0
     es           = exit_success
 
     cargs = handle_cmdline()
@@ -81,7 +80,6 @@ def main():
             if f not in afl_files:
                 afl_files.append(f)
                 new_files.append(f)
-        tot_files += len(new_files)-1
 
         if cargs.live:
             if is_afl_fuzz_running(cargs):
@@ -96,7 +94,7 @@ def main():
 
         if cargs.verbose or not cargs.quiet:
             print "[+] Imported %d files from: %s" \
-                    % (tot_files, (cargs.afl_fuzzing_dir + '/queue'))
+                    % (len(new_files), (cargs.afl_fuzzing_dir + '/queue'))
 
         for f in new_files:
 
@@ -104,7 +102,8 @@ def main():
 
             if cargs.verbose or not cargs.quiet:
                 print "[+] AFL file: %s (%d / %d), cycle: %d" \
-                        % (os.path.basename(f), file_num, tot_files, curr_cycle)
+                        % (os.path.basename(f), file_num, len(afl_files),
+                                curr_cycle)
 
             cov_paths = gen_paths(prev_file, f, gpaths, cargs)
 
@@ -147,7 +146,7 @@ def main():
             break
 
     if cargs.verbose or not cargs.quiet:
-        print "[+] Processed id:%d / %d files.\n" % (file_num-1, tot_files)
+        print "[+] Processed id:%d / %d files.\n" % (file_num-1, len(afl_files))
 
     ### write the final zero coverage and positive coverage reports
     write_zero_cov(gpaths['zero_cov'], zero_cov, cargs)
@@ -172,10 +171,6 @@ def main():
 
 def coverage_diff(cov_paths, gpaths, a, b, cargs):
 
-    if cargs.verbose or not cargs.quiet:
-        print "[+] Coverage diff %s %s" \
-                % (os.path.basename(a), os.path.basename(b))
-
     (old_zero_cov, old_pos_cov) \
             = extract_coverage(cov_paths['prev_lcov_info_final'], cargs)
 
@@ -196,6 +191,10 @@ def coverage_diff(cov_paths, gpaths, a, b, cargs):
                 for val in sorted(old_zero_cov[f][ctype]):
                     if val not in new_zero_cov[f][ctype]:
                         if not printed_diff_header:
+                            if cargs.verbose or not cargs.quiet:
+                                print "[+] Coverage diff %s %s" \
+                                        % (os.path.basename(a),
+                                                os.path.basename(b))
                             pstr = "diff %s -> %s" % (os.path.basename(a),
                                     os.path.basename(b))
                             tee_print(pstr, cov_paths['diff'])

@@ -1,3 +1,7 @@
+afl-cov-0.3 (06//2015):
+    - Add fuzzing-dir/cov/afl_cov_status file to track the current PID, argv,
+      and afl-cov version.
+
 afl-cov-0.2 (05/28/2015):
     - Add the fuzzing-dir/cov/id-delta-cov file which lists all functions and
       (and optionally lines) that are executed by the first "id:000000*" test
