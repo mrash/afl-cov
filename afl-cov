@@ -43,17 +43,7 @@ NO_OUTPUT   = 0
 
 def main():
 
-    version      = '0.2'
-    exit_failure = 1
-    exit_success = 0
-    found        = 0
-    afl_files    = []
-    prev_file    = ''
-    cov_paths    = {}
-    gcov         = {}
-    zero_cov     = {}
-    file_num     = 0
-    es           = exit_success
+    version = '0.2'
 
     cargs = handle_cmdline()
 
@@ -70,6 +60,36 @@ def main():
         return exit_failure
 
     write_status(version, cargs)
+
+    if cargs.daemon:
+        daemonize()
+
+    return not process_afl_test_cases(gpaths, cargs)
+
+def daemonize():
+    ### use the python 'daemon' module, but it isn't always
+    ### installed, and we just need a basic backgrounding
+    ### capability anyway
+    pid = os.fork()
+    if (pid < 0):
+        print "[*] fork() error, exiting."
+        os._exit()
+    elif (pid > 0):
+        os._exit(0)
+    else:
+        os.setsid()
+    return
+
+def process_afl_test_cases(gpaths, cargs):
+
+    found     = 0
+    afl_files = []
+    prev_file = ''
+    cov_paths = {}
+    gcov      = {}
+    zero_cov  = {}
+    file_num  = 0
+    rv        = 1
 
     while True:
 
@@ -160,12 +180,12 @@ def main():
     if not found:
         if cargs.func_search:
             logr("[-] Function '%s' not found..." % cargs.func_search, cargs)
-            es = exit_failure
+            rv = 0
         elif cargs.line_search:
             logr("[-] Line %s not found..." % cargs.line_search, cargs)
-            es = exit_failure
+            rv = 0
 
-    return es
+    return rv
 
 def coverage_diff(cov_paths, gpaths, a, b, cargs):
 
@@ -667,7 +687,7 @@ def handle_cmdline():
             help="In --live mode, # of seconds to sleep between checking for new queue files",
             default=60)
     p.add_argument("--daemon", action='store_true',
-            help="daemon mode - implies --live mode, and will exit when alf-fuzz process is finished",
+            help="daemon mode - if also in --live mode, will exit when the alf-fuzz process is finished",
             default=False)
     p.add_argument("--lcov-web-all", action='store_true',
             help="generate lcov web reports for all id:NNNNNN* files instead of just the last one",
