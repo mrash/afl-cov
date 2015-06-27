@@ -2,7 +2,7 @@
 #
 #  File: afl-cov
 #
-#  Version: 0.2
+#  Version: 0.3
 #
 #  Purpose: Perform lcov coverage diff's against each AFL queue file to see
 #           new functions and line coverage evolve from an AFL fuzzing cycle.
@@ -38,7 +38,7 @@ import argparse
 import time
 import sys, os
 
-__version__ = '0.2'
+__version__ = '0.3'
 
 WANT_OUTPUT = 1
 NO_OUTPUT   = 0

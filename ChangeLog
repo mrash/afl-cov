@@ -1,5 +1,11 @@
 afl-cov-0.3 (06//2015):
-    - Add fuzzing-dir/cov/afl_cov_status file to track the current PID, argv,
+    - Add --daemon mode to facilitate clean integration with afl-fuzz wrapper
+      scripts. afl-cov will wait for afl-fuzz to start, produce coverage
+      results while afl-fuzz is running, and then exit automatically when it
+      is finished.
+    - Add fuzzing-dir/cov/afl-cov.log file to track verbose run time
+      information.
+    - Add fuzzing-dir/cov/afl-cov-status file to track the current PID, argv,
       and afl-cov version.
 
 afl-cov-0.2 (05/28/2015):
