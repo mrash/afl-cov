@@ -1,4 +1,4 @@
-afl-cov-0.3 (06//2015):
+afl-cov-0.3 (06/27/2015):
     - Add --daemon mode to facilitate clean integration with afl-fuzz wrapper
       scripts. afl-cov will wait for afl-fuzz to start, produce coverage
       results while afl-fuzz is running, and then exit automatically when it
