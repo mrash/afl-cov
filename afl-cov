@@ -38,17 +38,20 @@ import argparse
 import time
 import sys, os
 
+__version__ = '0.2'
+
 WANT_OUTPUT = 1
 NO_OUTPUT   = 0
 
 def main():
 
-    version = '0.2'
+    exit_success = 0
+    exit_failure = 1
 
     cargs = handle_cmdline()
 
     if cargs.version:
-        print "afl-cov-" + version
+        print "afl-cov-" + __version__
         return exit_success
 
     (gpaths, rv) = global_paths(cargs)
@@ -59,7 +62,7 @@ def main():
     if not validate_args(gpaths, cargs):
         return exit_failure
 
-    write_status(version, cargs)
+    write_status(__version__, cargs)
 
     if cargs.daemon:
         daemonize()
