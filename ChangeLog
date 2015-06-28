@@ -1,8 +1,8 @@
 afl-cov-0.3 (06/27/2015):
-    - Add --daemon mode to facilitate clean integration with afl-fuzz wrapper
-      scripts. afl-cov will wait for afl-fuzz to start, produce coverage
-      results while afl-fuzz is running, and then exit automatically when it
-      is finished.
+    - Add --background mode to facilitate clean integration with afl-fuzz
+      wrapper scripts. In this mode, afl-cov will wait for afl-fuzz to start,
+      produce coverage results while afl-fuzz is running, and then exit
+      automatically when it is finished.
     - Add fuzzing-dir/cov/afl-cov.log file to track verbose run time
       information.
     - Add fuzzing-dir/cov/afl-cov-status file to track the current PID, argv,
