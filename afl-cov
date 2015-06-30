@@ -54,7 +54,7 @@ def main():
         print "afl-cov-" + __version__
         return exit_success
 
-    (gpaths, rv) = global_paths(cargs)
+    (gpaths, rv) = get_paths(cargs)
 
     if not rv:
         return exit_failure
@@ -62,10 +62,12 @@ def main():
     if not validate_args(gpaths, cargs):
         return exit_failure
 
-    write_status(__version__, cargs)
-
     if cargs.background:
         run_in_background()
+
+    init_dir(gpaths, cargs)
+
+    write_status(cargs)
 
     return not process_afl_test_cases(gpaths, cargs)
 
@@ -277,10 +279,10 @@ def rm_prev_cov_files(cov_paths):
     os.remove(cov_paths['prev_lcov_info_final'])
     return
 
-def write_status(version, cargs):
+def write_status(cargs):
     f = open(cargs.afl_fuzzing_dir + '/cov/afl-cov-status', 'w')
     f.write("afl_cov_pid     : %d\n" % os.getpid())
-    f.write("afl_cov_version : %s\n" % version)
+    f.write("afl_cov_version : %s\n" % __version__)
     f.write("command_line    : %s\n" % ' '.join(argv))
     f.close()
     return
@@ -544,7 +546,7 @@ def run_cmd(cmd, cargs, collect):
 def import_dir(qdir):
     return sorted(glob.glob(qdir + "/id:*"))
 
-def global_paths(cargs):
+def get_paths(cargs):
     gpaths = {}
 
     if not cargs.afl_fuzzing_dir:
@@ -565,23 +567,6 @@ def global_paths(cargs):
 
 def validate_args(gpaths, cargs):
 
-    if cargs.live:
-        while not fuzzing_dir_exists(cargs):
-            logr("[-] Sleep for %d seconds for AFL fuzzing directory to be created..." \
-                    % cargs.sleep, cargs)
-            time.sleep(cargs.sleep)
-
-        ### if we make it here then afl-fuzz is presumably running
-        while not is_afl_fuzz_running(cargs):
-            logr("[-] Sleep for %d seconds waiting for afl-fuzz to be started...." \
-                    % cargs.sleep, cargs)
-            time.sleep(cargs.sleep)
-    else:
-        if not fuzzing_dir_exists(cargs):
-            print "[*] It doesn't look like directory '%s' exists" \
-                % (cargs.afl_fuzzing_dir + '/queue')
-            return 0
-
     if cargs.coverage_cmd:
         if 'AFL_FILE' not in cargs.coverage_cmd:
             print "[*] --coverage-cmd must contain AFL_FILE"
@@ -590,33 +575,6 @@ def validate_args(gpaths, cargs):
         if not cargs.func_search and not cargs.line_search:
             print "[*] Must set --coverage-cmd or --func-search/--line-search"
             return 0
-
-    create_cov_dirs = 0
-    if os.path.exists(gpaths['top_dir']):
-        if cargs.overwrite:
-            rmtree(gpaths['top_dir'])
-            create_cov_dirs = 1
-        else:
-            if not cargs.func_search and not cargs.line_search:
-                print "[*] Existing coverage dir found, use --overwrite to " \
-                        "re-calculate coverage"
-                return 0
-    else:
-        create_cov_dirs = 1
-
-    if create_cov_dirs:
-        if not cargs.coverage_cmd:
-            print "[*] Must set --coverage-cmd unless using --func-search " \
-                    "against existing afl-cov directory"
-            return 0
-
-        for k in ['top_dir', 'web_dir', 'lcov_dir', 'diff_dir']:
-            os.mkdir(gpaths[k])
-
-        ### write coverage results in the following format
-        cfile = open(gpaths['id_delta_cov'], 'w')
-        cfile.write("# id:NNNNNN*_file, cycle, src_file, coverage_type, fcn/line\n")
-        cfile.close()
 
     if cargs.code_dir:
         if not os.path.exists(cargs.code_dir):
@@ -636,6 +594,52 @@ def validate_args(gpaths, cargs):
         if cargs.line_search and not cargs.src_file:
             print "[*] Must set --src-file in --line-search mode"
             return 0
+
+    if not cargs.live and not fuzzing_dir_exists(cargs):
+        print "[*] It doesn't look like directory '%s' exists" \
+            % (cargs.afl_fuzzing_dir + '/queue')
+        return 0
+
+    if os.path.exists(gpaths['top_dir']):
+        if not cargs.overwrite:
+            if not cargs.func_search and not cargs.line_search:
+                print "[*] Existing coverage dir found, use --overwrite to " \
+                        "re-calculate coverage"
+                return 0
+
+    return 1
+
+def init_dir(gpaths, cargs):
+    if cargs.live:
+        while not fuzzing_dir_exists(cargs):
+            if not cargs.background:
+                print "[-] Sleep for %d seconds for AFL fuzzing directory to be created..." \
+                        % cargs.sleep
+            time.sleep(cargs.sleep)
+
+        ### if we make it here then afl-fuzz is presumably running
+        while not is_afl_fuzz_running(cargs):
+            if not cargs.background:
+                print "[-] Sleep for %d seconds waiting for afl-fuzz to be started...." \
+                    % cargs.sleep
+            time.sleep(cargs.sleep)
+
+    create_cov_dirs = 0
+    if os.path.exists(gpaths['top_dir']):
+        if cargs.overwrite:
+            rmtree(gpaths['top_dir'])
+            create_cov_dirs = 1
+    else:
+        create_cov_dirs = 1
+
+    if create_cov_dirs:
+        for k in ['top_dir', 'web_dir', 'lcov_dir', 'diff_dir']:
+            os.mkdir(gpaths[k])
+
+        ### write coverage results in the following format
+        cfile = open(gpaths['id_delta_cov'], 'w')
+        cfile.write("# id:NNNNNN*_file, cycle, src_file, coverage_type, fcn/line\n")
+        cfile.close()
 
     if not cargs.disable_coverage_init \
             and create_cov_dirs and cargs.coverage_cmd:

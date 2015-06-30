@@ -1,8 +1,13 @@
-afl-cov-0.3 (06/27/2015):
+afl-cov-0.3 (06/29/2015):
     - Add --background mode to facilitate clean integration with afl-fuzz
       wrapper scripts. In this mode, afl-cov will wait for afl-fuzz to start,
       produce coverage results while afl-fuzz is running, and then exit
-      automatically when it is finished.
+      automatically when finished. Here is an example of a wrapper script from
+      the fwknop project that combines afl-cov in --background mode with
+      afl-fuzz:
+
+        https://github.com/mrash/fwknop/blob/master/test/afl/fuzzing-wrappers/client-rc.sh
+
     - Add fuzzing-dir/cov/afl-cov.log file to track verbose run time
       information.
     - Add fuzzing-dir/cov/afl-cov-status file to track the current PID, argv,
