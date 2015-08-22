@@ -80,7 +80,7 @@ $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
 Note the `AFL_FILE` string above refers to the test case file that AFL will
 build in the `queue/` directory under `/path/to/project-fuzz`. Just leave this
 string as-is - `afl-cov` will automatically substitute it with each AFL
-`queue/id:NNNNNN*` in succession as is builds the code coverage reports.
+`queue/id:NNNNNN*` in succession as it builds the code coverage reports.
 
 Also, in the above command, this handles the case where the AFL fuzzing cycle
 is fuzzing the targeted binary via stdin. This explains the
