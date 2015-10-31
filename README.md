@@ -108,7 +108,7 @@ generating code coverage data.
 
 ![alt text][AFL-status-screen]
 
-[AFL-status-screen]: /doc/AFL_status_screen.png "AFL Fuzzing Cycle"
+[AFL-status-screen]: doc/AFL_status_screen.png "AFL Fuzzing Cycle"
 
 Here is a sample of what the `afl-cov` output looks like:
 
@@ -191,7 +191,7 @@ opportunity to find bugs.
 
 ![alt text][AFL-lcov-web-report]
 
-[AFL-lcov-web-report]: /doc/AFL_lcov_web_report.png "AFL lcov web report"
+[AFL-lcov-web-report]: doc/AFL_lcov_web_report.png "AFL lcov web report"
 
 ### Other Examples
 The workflow above is probably the main strategy for using `afl-cov`. However,
