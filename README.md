@@ -10,7 +10,7 @@ new functions and lines are hit by AFL with each new test case. Further,
 coverage results, and when a match is found the corresponding test case file is
 displayed. This allows the user to discover which AFL test case is the first to
 exercise a particular function. In addition, `afl-cov` produces a "zero
-coverage" report of functions and lines that were never executed during an AFL
+coverage" report of functions and lines that were never executed during any AFL
 fuzzing run.
 
 Although of no use to AFL itself, the main application of `afl-cov` is to wrap
@@ -44,13 +44,13 @@ system, so technically `afl-fuzz` does not need to be installed on the same
 system as `afl-cov`. This supports scenarios where fuzzing output is collected,
 say, within a git repository on one system, and coverage results are produced
 on a different system. However, most workflows typically focus on producing
-`afl-cov` results quickly for current fuzzing runs on the same system.
+`afl-cov` results simultaneously for current fuzzing runs on the same system.
 
 ## Workflow
-At a high level, the general workflow for `afl-cov` is:
+At a high level, the general workflow for `afl-cov` against a targeted project is:
 
-1. Create a spare copy of the project sources compiled with gcov profiling support.
-2. Run `afl-cov` while `afl-fuzz` is building test cases.
+1. Create a spare copy of the project sources, and compile this copy with gcov profiling support.
+2. Run `afl-cov` against the copy while `afl-fuzz` is building test cases against the original sources.
 3. Review the cumulative code coverage results in the final web report.
 
 Now, in more detail:
@@ -200,11 +200,11 @@ additional use cases are supported such as:
 1. Suppose there are a set of wrapper scripts around `afl-fuzz` to run fuzzing
 cycles against various aspects of a project. By building a set of corresponding
 `afl-cov` wrappers, and then using the `--disable-coverage-init` option on all
-but the first of these wrappers, it is possible to generate code coverage results
-across the entire set of `afl-fuzz` fuzzing runs. (By default, `afl-cov` resets
-gcov counters to zero at start time, but the `--disable-coverage-init` stops this
-behavior.) The end result is a global picture of code coverage across all
-invocations of `afl-fuzz`.
+but the first of these wrappers, it is possible to generate code coverage
+results across the entire set of `afl-fuzz` fuzzing runs. (By default,
+`afl-cov` resets gcov counters to zero at start time, but the
+`--disable-coverage-init` argument stops this behavior.) The end result is a
+global picture of code coverage across all invocations of `afl-fuzz`.
 
 2. Specific functions can be searched for in the code coverage results, and
 `afl-cov` will return the first `afl-fuzz` test case where a given function is
