@@ -422,26 +422,30 @@ def get_cycle_num(id_num, cargs):
 
 def gen_coverage(gpaths, cov_paths, afl_file, cargs):
 
-    run_cmd("lcov --rc lcov_branch_coverage=1" \
+    run_cmd(cargs.lcov_path \
+            + " --rc lcov_branch_coverage=1" \
             + " --no-checksum --capture --initial" \
             + " --directory " + cargs.code_dir \
             + " --output-file " \
             + cov_paths['lcov_base'], \
             cargs, NO_OUTPUT)
 
-    run_cmd("lcov --rc lcov_branch_coverage=1" \
+    run_cmd(cargs.lcov_path \
+            + " --rc lcov_branch_coverage=1" \
             + " --no-checksum --capture --directory " \
             + cargs.code_dir + " --output-file " \
             + cov_paths['lcov_info'], \
             cargs, NO_OUTPUT)
 
-    run_cmd("lcov --rc lcov_branch_coverage=1" \
+    run_cmd(cargs.lcov_path \
+            + " --rc lcov_branch_coverage=1" \
             + " --no-checksum -a " + cov_paths['lcov_base'] \
             + " -a " + cov_paths['lcov_info'] \
             + " --output-file " + cov_paths['lcov_info_final'], \
             cargs, NO_OUTPUT)
 
-    out = run_cmd("lcov --rc lcov_branch_coverage=1" \
+    out = run_cmd(cargs.lcov_path \
+            + " --rc lcov_branch_coverage=1" \
             + " --no-checksum -r " + cov_paths['lcov_info'] \
             + " /usr/include/*  --output-file " \
             + cov_paths['lcov_info_final'], cargs, WANT_OUTPUT)
@@ -462,7 +466,8 @@ def gen_coverage(gpaths, cov_paths, afl_file, cargs):
 
 def gen_web_cov_report(gpaths, cov_paths, cargs):
     os.mkdir(cov_paths['lcov_web_dir'])
-    run_cmd("genhtml --branch-coverage --output-directory " \
+    run_cmd(cargs.genhtml_path \
+            + " --branch-coverage --output-directory " \
             + cov_paths['lcov_web_dir'] + " " \
             + cov_paths['lcov_info_final'], \
             cargs, NO_OUTPUT)
@@ -607,6 +612,15 @@ def validate_args(gpaths, cargs):
                         "re-calculate coverage"
                 return 0
 
+    if not os.path.exists(cargs.lcov_path):
+        print "[*] lcov command does not exist: %s" % (cargs.lcov_path)
+        return 0
+
+    if not cargs.disable_lcov_web and cargs.lcov_web_all:
+        if not os.path.exists(cargs.genhtml_path):
+            print "[*] genhtml command does not exist: %s" % (cargs.genthml_path)
+            return 0
+
     return 1
 
 def init_dir(gpaths, cargs):
@@ -644,7 +658,8 @@ def init_dir(gpaths, cargs):
     if not cargs.disable_coverage_init \
             and create_cov_dirs and cargs.coverage_cmd:
         ### reset code coverage counters
-        run_cmd("lcov --rc lcov_branch_coverage=1 " \
+        run_cmd(cargs.lcov_path \
+                + " --rc lcov_branch_coverage=1 " \
                 + "--no-checksum --zerocounters --directory " \
                 + cargs.code_dir, cargs, NO_OUTPUT)
 
@@ -684,6 +699,10 @@ def handle_cmdline():
     p.add_argument("--disable-coverage-init", action='store_true',
             help="disable initialization of code coverage counters at afl-cov startup",
             default=False)
+    p.add_argument("--lcov-path", type=str,
+            help="path to lcov command", default="/usr/bin/lcov")
+    p.add_argument("--genhtml-path", type=str,
+            help="path to genhtml command", default="/usr/bin/genhtml")
     p.add_argument("--coverage-include-lines", action='store_true',
             help="include lines in zero-coverage status files",
             default=False)
