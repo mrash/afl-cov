@@ -426,9 +426,9 @@ def get_cycle_num(id_num, cargs):
 
 def gen_coverage(gpaths, cov_paths, afl_file, cargs):
 
-    lcov_opts = " --rc "
+    lcov_opts = ''
     if cargs.enable_branch_coverage:
-        lcov_opts += "lcov_branch_coverage=1"
+        lcov_opts += '--rc lcov_branch_coverage=1'
 
     run_cmd(cargs.lcov_path \
             + lcov_opts
@@ -670,9 +670,12 @@ def init_dir(gpaths, cargs):
 
     if not cargs.disable_coverage_init \
             and create_cov_dirs and cargs.coverage_cmd:
+        lcov_opts = ''
+        if cargs.enable_branch_coverage:
+            lcov_opts += ' --rc lcov_branch_coverage=1 '
         ### reset code coverage counters
         run_cmd(cargs.lcov_path \
-                + " --rc lcov_branch_coverage=1 " \
+                + lcov_opts \
                 + "--no-checksum --zerocounters --directory " \
                 + cargs.code_dir, cargs, NO_OUTPUT)
 
