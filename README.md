@@ -49,9 +49,10 @@ on a different system. However, most workflows typically focus on producing
 ## Workflow
 At a high level, the general workflow for `afl-cov` against a targeted project is:
 
-1. Create a spare copy of the project sources, and compile this copy with gcov profiling support.
-2. Run `afl-cov` against the copy while `afl-fuzz` is building test cases against the original sources.
-3. Review the cumulative code coverage results in the final web report.
+1. Have the project compiled and known to work with AFL.
+2. Create a spare copy of the project sources, and compile this copy with gcov profiling support.
+3. Run `afl-cov` against the copy while `afl-fuzz` is building test cases against the original sources.
+4. Review the cumulative code coverage results in the final web report.
 
 Now, in more detail:
 
@@ -110,11 +111,19 @@ generating code coverage data.
 
 [AFL-status-screen]: doc/AFL_status_screen.png "AFL Fuzzing Cycle"
 
-Here is a sample of what the `afl-cov` output looks like:
+Note that by default `afl-cov` does not direct `lcov` to include branch
+coverage results. This is because there are commonly many (hundreds) of AFL
+test cases in the `queue/` directory, and generating branch coverage across all
+of these cases may slow `afl-cov` down significantly. If branch coverage is
+desired, just add the `--enable-branch-coverage` argument to `afl-cov`.
+
+Here is a sample of what the `afl-cov` output looks like (note this includes
+the `--enable-branch-coverage` argument as described above):
 
 ```bash
 $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
-"LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f AFL_FILE -a -b -c" --code-dir .
+"LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f AFL_FILE -a -b -c" \
+--code-dir . --enable-branch-coverage
 [+] Imported 184 files from: /path/to/afl-fuzz-output/queue
 [+] AFL file: id:000000,orig:somestr.start (1 / 184), cycle: 0
     lines......: 18.6% (1122 of 6032 lines)
