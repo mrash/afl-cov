@@ -31,12 +31,16 @@ from shutil import rmtree
 from sys import argv
 import errno
 import re
-import subprocess
 import glob
 import string
 import argparse
 import time
 import sys, os
+
+try:
+    import subprocess32 as subprocess
+except ImportError:
+    import subprocess
 
 __version__ = '0.3'
 
