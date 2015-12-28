@@ -1,3 +1,10 @@
+afl-cov-0.4 (01//2016):
+    - Default to not include branch coverage data within code coverag results
+      This is because AFL commonly build up many hundreds of test cases, and
+      generating branch coverage across all of these cases may slow afl-cov
+      down significantly. However, if branch coverage is desired, just add the
+      new --enable-branch-coverage argument.
+
 afl-cov-0.3 (06/29/2015):
     - Add --background mode to facilitate clean integration with afl-fuzz
       wrapper scripts. In this mode, afl-cov will wait for afl-fuzz to start,
