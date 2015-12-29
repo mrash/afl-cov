@@ -177,27 +177,31 @@ def process_afl_test_cases(gpaths, cargs):
         else:
             break
 
-    logr("[+] Processed id:%d / %d test cases.\n" \
-            % (file_num-1, len(afl_files)), cargs)
+    if file_num > 0:
+        logr("[+] Processed id:%d / %d test cases.\n" \
+                % (file_num-1, len(afl_files)), cargs)
 
-    ### write the final zero coverage and positive coverage reports
-    write_zero_cov(gpaths['zero_cov'], zero_cov, cargs)
-    write_pos_cov(gpaths['pos_cov'], gcov, cargs)
+        ### write the final zero coverage and positive coverage reports
+        write_zero_cov(gpaths['zero_cov'], zero_cov, cargs)
+        write_pos_cov(gpaths['pos_cov'], gcov, cargs)
 
-    if not cargs.disable_lcov_web:
-        gen_web_cov_report(gpaths, cov_paths, cargs)
-        logr("[+] Final lcov web report: %s" \
-                % gpaths['web_dir'] + '/lcov-web-final.html', cargs)
-        os.symlink(cov_paths['lcov_web_dir'] + '/index.html',
-                gpaths['web_dir'] + '/lcov-web-final.html')
+        if not cargs.disable_lcov_web:
+            gen_web_cov_report(gpaths, cov_paths, cargs)
+            logr("[+] Final lcov web report: %s" \
+                    % gpaths['web_dir'] + '/lcov-web-final.html', cargs)
+            os.symlink(cov_paths['lcov_web_dir'] + '/index.html',
+                    gpaths['web_dir'] + '/lcov-web-final.html')
 
-    if not found:
-        if cargs.func_search:
-            logr("[-] Function '%s' not found..." % cargs.func_search, cargs)
-            rv = 0
-        elif cargs.line_search:
-            logr("[-] Line %s not found..." % cargs.line_search, cargs)
-            rv = 0
+        if not found:
+            if cargs.func_search:
+                logr("[-] Function '%s' not found..." % cargs.func_search, cargs)
+                rv = 0
+            elif cargs.line_search:
+                logr("[-] Line %s not found..." % cargs.line_search, cargs)
+                rv = 0
+    else:
+        logr("[*] Did not find any AFL test cases, exiting.\n", cargs)
+        rv = 0
 
     return rv
 
@@ -495,21 +499,24 @@ def is_afl_fuzz_running(cargs):
 
     found = 0
 
-    with open(cargs.afl_fuzzing_dir + '/fuzzer_stats', 'r') as f:
-        for line in f:
-            line = line.strip()
-            ### fuzzer_pid     : 13238
-            m = re.search('fuzzer_pid\s+\:\s+(\d+)', line)
-            if m and m.group(1):
-                pid = int(m.group(1))
-                try:
-                    os.kill(pid, 0)
-                except OSError as e:
-                    if e.errno == errno.EPERM:
+    stats_file = cargs.afl_fuzzing_dir + '/fuzzer_stats'
+
+    if os.path.exists(stats_file):
+        with open(stats_file, 'r') as f:
+            for line in f:
+                line = line.strip()
+                ### fuzzer_pid     : 13238
+                m = re.search('fuzzer_pid\s+\:\s+(\d+)', line)
+                if m and m.group(1):
+                    pid = int(m.group(1))
+                    try:
+                        os.kill(pid, 0)
+                    except OSError as e:
+                        if e.errno == errno.EPERM:
+                            found = 1
+                    else:
                         found = 1
-                else:
-                    found = 1
-                break
+                    break
 
     return found
 
@@ -630,7 +637,7 @@ def validate_args(gpaths, cargs):
 
     if not cargs.live and not fuzzing_dir_exists(cargs):
         print "[*] It doesn't look like directory '%s' exists" \
-            % (cargs.afl_fuzzing_dir + '/queue')
+            % (cargs.afl_fuzzing_dir)
         return 0
 
     if os.path.exists(gpaths['top_dir']):
@@ -698,8 +705,6 @@ def init_dir(gpaths, cargs):
 
 def fuzzing_dir_exists(cargs):
     if not os.path.exists(cargs.afl_fuzzing_dir):
-        return 0
-    if not os.path.exists(cargs.afl_fuzzing_dir + '/queue'):
         return 0
     return 1
 
