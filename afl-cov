@@ -433,7 +433,7 @@ def gen_coverage(gpaths, cov_paths, afl_file, cargs):
 
     lcov_opts = ''
     if cargs.enable_branch_coverage:
-        lcov_opts += '--rc lcov_branch_coverage=1'
+        lcov_opts += ' --rc lcov_branch_coverage=1'
 
     run_cmd(cargs.lcov_path \
             + lcov_opts
@@ -691,7 +691,7 @@ def init_dir(gpaths, cargs):
         ### reset code coverage counters
         run_cmd(cargs.lcov_path \
                 + lcov_opts \
-                + "--no-checksum --zerocounters --directory " \
+                + " --no-checksum --zerocounters --directory " \
                 + cargs.code_dir, cargs, NO_OUTPUT)
 
     return 1
