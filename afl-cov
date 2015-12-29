@@ -110,19 +110,9 @@ def process_afl_test_cases(gpaths, cargs):
                 afl_files.append(f)
                 new_files.append(f)
 
-        if cargs.live:
-            if is_afl_fuzz_running(cargs):
-                if not len(new_files):
-                    logr("[-] No new AFL test cases, sleeping for %d seconds" \
-                            % cargs.sleep, cargs)
-                    time.sleep(cargs.sleep)
-                    continue
-            else:
-                logr("[+] afl-fuzz appears to be stopped...", cargs)
-                break
-
-        logr("\n*** Imported %d new test cases from: %s\n" \
-                % (len(new_files), (cargs.afl_fuzzing_dir + '/queue')), cargs)
+        if new_files:
+            logr("\n*** Imported %d new test cases from: %s\n" \
+                    % (len(new_files), (cargs.afl_fuzzing_dir + '/queue')), cargs)
 
         for f in new_files:
 
@@ -169,7 +159,17 @@ def process_afl_test_cases(gpaths, cargs):
                         % cargs.afl_queue_id_limit, cargs)
                 break
 
-        if not cargs.live:
+        if cargs.live:
+            if is_afl_fuzz_running(cargs):
+                if not len(new_files):
+                    logr("[-] No new AFL test cases, sleeping for %d seconds" \
+                            % cargs.sleep, cargs)
+                    time.sleep(cargs.sleep)
+                    continue
+            else:
+                logr("[+] afl-fuzz appears to be stopped...", cargs)
+                break
+        else:
             break
 
     logr("[+] Processed id:%d / %d test cases.\n" \
