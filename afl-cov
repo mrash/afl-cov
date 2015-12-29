@@ -93,71 +93,76 @@ def process_afl_test_cases(gpaths, cargs):
 
     found     = 0
     afl_files = []
-    prev_file = ''
     cov_paths = {}
     gcov      = {}
     zero_cov  = {}
     file_num  = 0
     rv        = 1
+    cov_tracking = {}
 
     while True:
 
-        new_files = []
-        tmp_files = import_dir(cargs.afl_fuzzing_dir + '/queue')
+        import_fuzzing_dirs(cargs, cov_tracking)
 
-        for f in tmp_files:
-            if f not in afl_files:
-                afl_files.append(f)
-                new_files.append(f)
+        for fuzz_dir in cov_tracking:
+            new_files = []
+            tmp_files = import_test_cases(fuzz_dir)
 
-        if new_files:
-            logr("\n*** Imported %d new test cases from: %s\n" \
-                    % (len(new_files), (cargs.afl_fuzzing_dir + '/queue')), cargs)
+            for f in tmp_files:
+                if f not in afl_files:
+                    afl_files.append(f)
+                    new_files.append(f)
 
-        for f in new_files:
+            if new_files:
+                logr("\n*** Imported %d new test cases from: %s\n" \
+                        % (len(new_files), (cargs.afl_fuzzing_dir + '/queue')), cargs)
 
-            curr_cycle = get_cycle_num(file_num, cargs)
+            for f in new_files:
 
-            logr("[+] AFL test case: %s (%d / %d), cycle: %d" \
-                    % (os.path.basename(f), file_num, len(afl_files),
-                            curr_cycle), cargs)
+                curr_cycle = get_cycle_num(file_num, cargs)
 
-            cov_paths = gen_paths(prev_file, f, gpaths, cargs)
+                logr("[+] AFL test case: %s (%d / %d), cycle: %d" \
+                        % (os.path.basename(f), file_num, len(afl_files),
+                                curr_cycle), cargs)
 
-            if cargs.coverage_cmd:
-                ### execute the command to generate code coverage stats
-                ### for the current AFL queue file
-                run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f), \
-                        cargs, NO_OUTPUT)
+                cov_paths = gen_paths(cov_tracking[fuzz_dir]['prev_file'],
+                        f, gpaths, cargs)
 
-                ### collect the code coverage stats
-                gen_coverage(gpaths, cov_paths, f, cargs)
+                if cargs.coverage_cmd:
+                    ### execute the command to generate code coverage stats
+                    ### for the current AFL queue file
+                    run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f), \
+                            cargs, NO_OUTPUT)
 
-                ### extract and write out the coverage result for this
-                ### id:NNNNNN* test case
-                append_id_delta_cov(gcov, curr_cycle, cov_paths, gpaths, cargs)
+                    ### collect the code coverage stats
+                    gen_coverage(gpaths, cov_paths, f, cargs)
 
-                ### diff to the previous code coverage and look for
-                ### new lines/functions
-                if file_num > 0:
-                    zero_cov = coverage_diff(cov_paths, gpaths, prev_file, f, cargs)
+                    ### extract and write out the coverage result for this
+                    ### id:NNNNNN* test case
+                    append_id_delta_cov(gcov, curr_cycle, cov_paths, gpaths, cargs)
 
-                if not cargs.disable_lcov_web and cargs.lcov_web_all:
-                    gen_web_cov_report(gpaths, cov_paths, cargs)
+                    ### diff to the previous code coverage and look for
+                    ### new lines/functions
+                    if file_num > 0:
+                        zero_cov = coverage_diff(cov_paths, gpaths,
+                                cov_tracking[fuzz_dir]['prev_file'], f, cargs)
 
-            prev_file = f
-            file_num += 1
+                    if not cargs.disable_lcov_web and cargs.lcov_web_all:
+                        gen_web_cov_report(gpaths, cov_paths, cargs)
 
-            if cargs.func_search or cargs.line_search:
-                if not found:
-                    found = search_cov(gpaths, cargs)
-                if found and not cargs.live:
+                cov_tracking[fuzz_dir]['prev_file'] = f
+                file_num += 1
+
+                if cargs.func_search or cargs.line_search:
+                    if not found:
+                        found = search_cov(gpaths, cargs)
+                    if found and not cargs.live:
+                        break
+
+                if cargs.afl_queue_id_limit and file_num > cargs.afl_queue_id_limit:
+                    logr("[+] queue/ id limit of %d reached..." \
+                            % cargs.afl_queue_id_limit, cargs)
                     break
-
-            if cargs.afl_queue_id_limit and file_num > cargs.afl_queue_id_limit:
-                logr("[+] queue/ id limit of %d reached..." \
-                        % cargs.afl_queue_id_limit, cargs)
-                break
 
         if cargs.live:
             if is_afl_fuzz_running(cargs):
@@ -561,7 +566,17 @@ def run_cmd(cmd, cargs, collect):
 
     return out
 
-def import_dir(qdir):
+def import_fuzzing_dirs(cargs, cov_tracking):
+
+    def_fuzz_dir = cargs.afl_fuzzing_dir + '/queue'
+
+    if os.path.exists(def_fuzz_dir):
+        if def_fuzz_dir not in cov_tracking:
+            cov_tracking[def_fuzz_dir] = {}
+            cov_tracking[def_fuzz_dir]['prev_file'] = ''
+    return
+
+def import_test_cases(qdir):
     return sorted(glob.glob(qdir + "/id:*"))
 
 def get_paths(cargs):
