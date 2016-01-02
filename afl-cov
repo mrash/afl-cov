@@ -52,28 +52,22 @@ def main():
     exit_success = 0
     exit_failure = 1
 
-    cargs = handle_cmdline()
+    cargs = parse_cmdline()
 
     if cargs.version:
         print "afl-cov-" + __version__
         return exit_success
 
-    (gpaths, rv) = get_paths(cargs)
-
-    if not rv:
-        return exit_failure
-
-    if not validate_args(gpaths, cargs):
+    if not validate_args(cargs):
         return exit_failure
 
     if cargs.background:
         run_in_background()
 
-    init_dir(gpaths, cargs)
+    if cargs.live:
+        is_afl_running(cargs)
 
-    write_status(cargs)
-
-    return not process_afl_test_cases(gpaths, cargs)
+    return not process_afl_test_cases(cargs)
 
 def run_in_background():
     ### could use the python 'daemon' module, but it isn't always
@@ -89,24 +83,33 @@ def run_in_background():
         os.setsid()
     return
 
-def process_afl_test_cases(gpaths, cargs):
+def process_afl_test_cases(cargs):
 
-    found     = 0
+    rv    = 1
+    found = 0
+    tot_files = 0
+
     afl_files = []
-    cov_paths = {}
-    gcov      = {}
-    zero_cov  = {}
-    file_num  = 0
-    rv        = 1
-    cov_tracking = {}
+    global_pos_cov  = {}
+    global_zero_cov = {}
+    cov_tracking    = {}
+    zero_cov        = {}
+    gcov            = {}
+    fuzz_dir        = ''
 
     while True:
 
-        import_fuzzing_dirs(cargs, cov_tracking)
+        if not import_fuzzing_dirs(cov_tracking, cargs):
+            rv = 0
+            break
 
-        for fuzz_dir in cov_tracking:
+        for fuzz_dir in cov_tracking['dirs']:
+
+            ct = cov_tracking['dirs'][fuzz_dir]
+
+            num_files = 0
             new_files = []
-            tmp_files = import_test_cases(fuzz_dir)
+            tmp_files = import_test_cases(fuzz_dir + '/queue')
 
             for f in tmp_files:
                 if f not in afl_files:
@@ -115,18 +118,17 @@ def process_afl_test_cases(gpaths, cargs):
 
             if new_files:
                 logr("\n*** Imported %d new test cases from: %s\n" \
-                        % (len(new_files), (cargs.afl_fuzzing_dir + '/queue')), cargs)
+                        % (len(new_files), (fuzz_dir + '/queue')), cargs)
 
             for f in new_files:
 
-                curr_cycle = get_cycle_num(file_num, cargs)
+                curr_cycle = get_cycle_num(num_files, cargs)
 
                 logr("[+] AFL test case: %s (%d / %d), cycle: %d" \
-                        % (os.path.basename(f), file_num, len(afl_files),
+                        % (os.path.basename(f), num_files, len(afl_files),
                                 curr_cycle), cargs)
 
-                cov_paths = gen_paths(cov_tracking[fuzz_dir]['prev_file'],
-                        f, gpaths, cargs)
+                gen_paths(fuzz_dir, cov_tracking, f, cargs)
 
                 if cargs.coverage_cmd:
                     ### execute the command to generate code coverage stats
@@ -135,31 +137,32 @@ def process_afl_test_cases(gpaths, cargs):
                             cargs, NO_OUTPUT)
 
                     ### collect the code coverage stats
-                    gen_coverage(gpaths, cov_paths, f, cargs)
+                    gen_coverage(ct, cargs)
 
                     ### extract and write out the coverage result for this
                     ### id:NNNNNN* test case
-                    append_id_delta_cov(gcov, curr_cycle, cov_paths, gpaths, cargs)
+                    append_id_delta_cov(gcov, curr_cycle, ct, \
+                            cov_tracking['id_delta_cov'], cargs)
 
                     ### diff to the previous code coverage and look for
                     ### new lines/functions
-                    if file_num > 0:
-                        zero_cov = coverage_diff(cov_paths, gpaths,
-                                cov_tracking[fuzz_dir]['prev_file'], f, cargs)
+                    if num_files > 0:
+                        zero_cov = coverage_diff(ct, f, cargs)
 
                     if not cargs.disable_lcov_web and cargs.lcov_web_all:
-                        gen_web_cov_report(gpaths, cov_paths, cargs)
+                        gen_web_cov_report(ct, cov_tracking['web_dir'], cargs)
 
-                cov_tracking[fuzz_dir]['prev_file'] = f
-                file_num += 1
+                ct['prev_file'] = f
+                num_files += 1
+                tot_files += 1
 
                 if cargs.func_search or cargs.line_search:
                     if not found:
-                        found = search_cov(gpaths, cargs)
+                        found = search_cov(ct, cargs)
                     if found and not cargs.live:
                         break
 
-                if cargs.afl_queue_id_limit and file_num > cargs.afl_queue_id_limit:
+                if cargs.afl_queue_id_limit and num_files > cargs.afl_queue_id_limit:
                     logr("[+] queue/ id limit of %d reached..." \
                             % cargs.afl_queue_id_limit, cargs)
                     break
@@ -177,20 +180,17 @@ def process_afl_test_cases(gpaths, cargs):
         else:
             break
 
-    if file_num > 0:
-        logr("[+] Processed id:%d / %d test cases.\n" \
-                % (file_num-1, len(afl_files)), cargs)
+    if tot_files > 0:
+        logr("[+] Processed %d / %d test cases.\n" \
+                % (tot_files, len(afl_files)), cargs)
 
-        ### write the final zero coverage and positive coverage reports
-        write_zero_cov(gpaths['zero_cov'], zero_cov, cargs)
-        write_pos_cov(gpaths['pos_cov'], gcov, cargs)
+        ### write out the final zero coverage and positive coverage reports
+        write_zero_cov(cov_tracking['zero_cov'], zero_cov, cargs)
+        write_pos_cov(cov_tracking['pos_cov'], gcov, cargs)
 
         if not cargs.disable_lcov_web:
-            gen_web_cov_report(gpaths, cov_paths, cargs)
-            logr("[+] Final lcov web report: %s" \
-                    % gpaths['web_dir'] + '/lcov-web-final.html', cargs)
-            os.symlink(cov_paths['lcov_web_dir'] + '/index.html',
-                    gpaths['web_dir'] + '/lcov-web-final.html')
+            gen_web_cov_report(cov_tracking['dirs'][fuzz_dir], \
+                    cov_tracking['web_dir'], cargs)
 
         if not found:
             if cargs.func_search:
@@ -205,18 +205,21 @@ def process_afl_test_cases(gpaths, cargs):
 
     return rv
 
-def coverage_diff(cov_paths, gpaths, a, b, cargs):
+def coverage_diff(ct, afl_file, cargs):
+
+    a = ct['prev_file']
+    b = afl_file
 
     (old_zero_cov, old_pos_cov) \
-            = extract_coverage(cov_paths['prev_lcov_info_final'], cargs)
+            = extract_coverage(ct['prev_lcov_info_final'], cargs)
 
     ### with the coverage from the previous lcov results extracted,
     ### we remove associated files unless instructed to keep them
     if not cargs.preserve_all_lcov_files:
-        rm_prev_cov_files(cov_paths)
+        rm_prev_cov_files(ct)
 
     (new_zero_cov, new_pos_cov) \
-            = extract_coverage(cov_paths['lcov_info_final'], cargs)
+            = extract_coverage(ct['lcov_info_final'], cargs)
 
     ### diff the two dictionaries
     printed_diff_header = 0
@@ -233,18 +236,18 @@ def coverage_diff(cov_paths, gpaths, a, b, cargs):
                             pstr = "diff %s -> %s" % (os.path.basename(a),
                                     os.path.basename(b))
                             logr(pstr, cargs)
-                            append_file(pstr, cov_paths['diff'])
+                            append_file(pstr, ct['diff'])
                             printed_diff_header = 1
 
                         if not printed_file:
                             pstr = "Src file: " + f
                             logr(pstr, cargs)
-                            append_file(pstr, cov_paths['diff'])
+                            append_file(pstr, ct['diff'])
                             printed_file = 1
 
                         pstr = "  New '" + ctype + "' coverage: " + val
                         logr(pstr, cargs)
-                        append_file(pstr, cov_paths['diff'])
+                        append_file(pstr, ct['diff'])
 
     if printed_diff_header:
         logr("", cargs)
@@ -286,14 +289,14 @@ def write_cov(cpath, cov, cargs):
 
     return
 
-def rm_prev_cov_files(cov_paths):
-    os.remove(cov_paths['prev_lcov_base'])
-    os.remove(cov_paths['prev_lcov_info'])
-    os.remove(cov_paths['prev_lcov_info_final'])
+def rm_prev_cov_files(ct):
+    os.remove(ct['prev_lcov_base'])
+    os.remove(ct['prev_lcov_info'])
+    os.remove(ct['prev_lcov_info_final'])
     return
 
-def write_status(cargs):
-    f = open(cargs.afl_fuzzing_dir + '/cov/afl-cov-status', 'w')
+def write_status(status_file):
+    f = open(status_file, 'w')
     f.write("afl_cov_pid     : %d\n" % os.getpid())
     f.write("afl_cov_version : %s\n" % __version__)
     f.write("command_line    : %s\n" % ' '.join(argv))
@@ -306,11 +309,11 @@ def append_file(pstr, path):
     f.close()
     return
 
-def append_id_delta_cov(gcov, curr_cycle, cov_paths, gpaths, cargs):
+def append_id_delta_cov(gcov, curr_cycle, ct, delta_file, cargs):
 
-    pos_cov = extract_coverage(cov_paths['lcov_info_final'], cargs)[1]
+    pos_cov = extract_coverage(ct['lcov_info_final'], cargs)[1]
 
-    cfile = open(gpaths['id_delta_cov'], 'a')
+    cfile = open(delta_file, 'a')
     for f in pos_cov:
         if f not in gcov:
             cov_init(f, gcov)
@@ -320,7 +323,7 @@ def append_id_delta_cov(gcov, curr_cycle, cov_paths, gpaths, cargs):
                     if val not in gcov[f][ctype]:
                         gcov[f][ctype][val] = ''
                         cfile.write("%s, %s, %s, %s, %s\n" \
-                                % (cov_paths['id_file'],
+                                % (ct['id_file'],
                                     curr_cycle, f, ctype, val))
             elif ctype == 'line':
                 if cargs.coverage_include_lines:
@@ -328,7 +331,7 @@ def append_id_delta_cov(gcov, curr_cycle, cov_paths, gpaths, cargs):
                         if val not in gcov[f][ctype]:
                             gcov[f][ctype][val] = ''
                             cfile.write("%s, %s, %s, %s, %s\n" \
-                                    % (cov_paths['id_file'],
+                                    % (ct['id_file'],
                                         curr_cycle, f, ctype, val))
     cfile.close()
 
@@ -383,11 +386,11 @@ def extract_coverage(lcov_file, cargs):
 
     return zero_cov, pos_cov
 
-def search_cov(gpaths, cargs):
+def search_cov(ct, cargs):
 
     search_rv = 0
 
-    with open(gpaths['id_delta_cov'], 'r') as f:
+    with open(ct['id_delta_cov'], 'r') as f:
         for line in f:
             line = line.strip()
             ### id:NNNNNN*_file, cycle, src_file, cov_type, fcn/line\n")
@@ -433,7 +436,7 @@ def get_cycle_num(id_num, cargs):
 
     return cycle_num
 
-def gen_coverage(gpaths, cov_paths, afl_file, cargs):
+def gen_coverage(c, cargs):
 
     lcov_opts = ''
     if cargs.enable_branch_coverage:
@@ -444,28 +447,28 @@ def gen_coverage(gpaths, cov_paths, afl_file, cargs):
             + " --no-checksum --capture --initial" \
             + " --directory " + cargs.code_dir \
             + " --output-file " \
-            + cov_paths['lcov_base'], \
+            + c['lcov_base'], \
             cargs, NO_OUTPUT)
 
     run_cmd(cargs.lcov_path \
             + lcov_opts
             + " --no-checksum --capture --directory " \
             + cargs.code_dir + " --output-file " \
-            + cov_paths['lcov_info'], \
+            + c['lcov_info'], \
             cargs, NO_OUTPUT)
 
     run_cmd(cargs.lcov_path \
             + lcov_opts
-            + " --no-checksum -a " + cov_paths['lcov_base'] \
-            + " -a " + cov_paths['lcov_info'] \
-            + " --output-file " + cov_paths['lcov_info_final'], \
+            + " --no-checksum -a " + c['lcov_base'] \
+            + " -a " + c['lcov_info'] \
+            + " --output-file " + c['lcov_info_final'], \
             cargs, NO_OUTPUT)
 
     out = run_cmd(cargs.lcov_path \
             + lcov_opts
-            + " --no-checksum -r " + cov_paths['lcov_info'] \
+            + " --no-checksum -r " + c['lcov_info'] \
             + " /usr/include/*  --output-file " \
-            + cov_paths['lcov_info_final'], cargs, WANT_OUTPUT)
+            + c['lcov_info_final'], cargs, WANT_OUTPUT)
 
     for line in out.splitlines():
         m = re.search('^\s+(lines\.\..*\:\s.*)', line)
@@ -482,17 +485,26 @@ def gen_coverage(gpaths, cov_paths, afl_file, cargs):
                         logr("    " + m.group(1), cargs)
     return
 
-def gen_web_cov_report(gpaths, cov_paths, cargs):
-    os.mkdir(cov_paths['lcov_web_dir'])
+def gen_web_cov_report(ct, web_dir, cargs):
+
+    os.mkdir(ct['lcov_web_dir'])
     genhtml_opts = ''
+
     if cargs.enable_branch_coverage:
         genhtml_opts += ' --branch-coverage'
+
     run_cmd(cargs.genhtml_path \
             + genhtml_opts
             + " --output-directory " \
-            + cov_paths['lcov_web_dir'] + " " \
-            + cov_paths['lcov_info_final'], \
+            + ct['lcov_web_dir'] + " " \
+            + ct['lcov_info_final'], \
             cargs, NO_OUTPUT)
+
+    logr("[+] Final lcov web report: %s" \
+            % web_dir + '/lcov-web-final.html', cargs)
+    os.symlink(ct['lcov_web_dir'] + '/index.html',
+            web_dir + '/lcov-web-final.html')
+
     return
 
 def is_afl_fuzz_running(cargs):
@@ -520,36 +532,35 @@ def is_afl_fuzz_running(cargs):
 
     return found
 
-def gen_paths(prev_afl_file, afl_file, gpaths, cargs):
-
-    cov_paths = {}
+def gen_paths(fuzz_dir, cov_tracking, afl_file, cargs):
 
     basename = os.path.basename(afl_file)
 
+    ct = cov_tracking['dirs'][fuzz_dir]
+
     ### coverage diffs from one ID file to the next
-    cov_paths['diff'] = gpaths['diff_dir'] + '/' + basename
+    ct['diff'] = cov_tracking['diff_dir'] + '/' + basename
 
     ### current id:NNNNNN* test case file
-    cov_paths['id_file'] = basename
+    ct['id_file'] = basename
 
     ### web files
-    cov_paths['lcov_web_dir'] = gpaths['web_dir'] + '/' + basename
+    ct['lcov_web_dir'] = cov_tracking['web_dir'] + '/' + basename
 
     ### raw lcov files
-    cov_paths['lcov_base'] = gpaths['lcov_dir'] + '/' + basename + '.lcov_base'
-    cov_paths['lcov_info'] = gpaths['lcov_dir'] + '/' + basename + '.lcov_info'
-    cov_paths['lcov_info_final'] = gpaths['lcov_dir'] + '/' \
+    ct['lcov_base'] = cov_tracking['lcov_dir'] + '/' + basename + '.lcov_base'
+    ct['lcov_info'] = cov_tracking['lcov_dir'] + '/' + basename + '.lcov_info'
+    ct['lcov_info_final'] = cov_tracking['lcov_dir'] + '/' \
             + basename + '.lcov_info_final'
 
-    if prev_afl_file:
-        cov_paths['prev_lcov_base'] = gpaths['lcov_dir'] + '/' \
-                + os.path.basename(prev_afl_file) + '.lcov_base'
-        cov_paths['prev_lcov_info'] = gpaths['lcov_dir'] + '/' \
-                + os.path.basename(prev_afl_file) + '.lcov_info'
-        cov_paths['prev_lcov_info_final'] = gpaths['lcov_dir'] + \
-                '/' + os.path.basename(prev_afl_file) + '.lcov_info_final'
-
-    return cov_paths
+    if ct['prev_file']:
+        ct['prev_lcov_base'] = cov_tracking['lcov_dir'] + '/' \
+                + os.path.basename(ct['prev_file']) + '.lcov_base'
+        ct['prev_lcov_info'] = cov_tracking['lcov_dir'] + '/' \
+                + os.path.basename(ct['prev_file']) + '.lcov_info'
+        ct['prev_lcov_info_final'] = cov_tracking['lcov_dir'] + \
+                '/' + os.path.basename(ct['prev_file']) + '.lcov_info_final'
+    return
 
 def run_cmd(cmd, cargs, collect):
 
@@ -573,39 +584,77 @@ def run_cmd(cmd, cargs, collect):
 
     return out
 
-def import_fuzzing_dirs(cargs, cov_tracking):
+def import_fuzzing_dirs(ct, cargs):
 
-    def_fuzz_dir = cargs.afl_fuzzing_dir + '/queue'
+    if not cargs.afl_fuzzing_dir:
+        print "[*] Must specify AFL fuzzing dir with --afl-fuzzing-dir or -d"
+        return 0
 
-    if os.path.exists(def_fuzz_dir):
-        if def_fuzz_dir not in cov_tracking:
-            cov_tracking[def_fuzz_dir] = {}
-            cov_tracking[def_fuzz_dir]['prev_file'] = ''
-    return
+    if 'top_dir' not in ct:
+        if not init_tracking(ct, cargs):
+            return 0
+
+    def_dir = cargs.afl_fuzzing_dir
+
+    if os.path.exists(def_dir + '/queue'):
+        if def_dir not in ct['dirs']:
+            add_dir(def_dir, ct)
+    else:
+        for p in os.listdir(def_dir):
+            fuzz_dir = def_dir + '/' + p
+            if os.path.isdir(fuzz_dir):
+                if os.path.exists(fuzz_dir + '/queue'):
+                    ### found an AFL fuzzing directory instance
+                    if fuzz_dir not in ct['dirs']:
+                        add_dir(fuzz_dir, ct)
+
+    return 1
 
 def import_test_cases(qdir):
     return sorted(glob.glob(qdir + "/id:*"))
 
-def get_paths(cargs):
-    gpaths = {}
+def init_tracking(ct, cargs):
 
-    if not cargs.afl_fuzzing_dir:
-        print "[*] Must specify AFL fuzzing dir with --afl-fuzzing-dir or -d"
-        return gpaths, 0
+    ct['dirs'] = {}
 
-    gpaths['top_dir']  = cargs.afl_fuzzing_dir + '/cov'
-    gpaths['web_dir']  = gpaths['top_dir'] + '/web'
-    gpaths['lcov_dir'] = gpaths['top_dir'] + '/lcov'
-    gpaths['diff_dir'] = gpaths['top_dir'] + '/diff'
+    ct['top_dir']   = cargs.afl_fuzzing_dir + '/cov'
+    ct['web_dir']   = ct['top_dir'] + '/web'
+    ct['lcov_dir']  = ct['top_dir'] + '/lcov'
+    ct['diff_dir']  = ct['top_dir'] + '/diff'
 
-    ### summary coverage results
-    gpaths['id_delta_cov'] = gpaths['top_dir'] + '/id-delta-cov'
-    gpaths['zero_cov']     = gpaths['top_dir'] + '/zero-cov'
-    gpaths['pos_cov']      = gpaths['top_dir'] + '/pos-cov'
+    ### global coverage results
+    ct['id_delta_cov'] = ct['top_dir'] + '/id-delta-cov'
+    ct['zero_cov']     = ct['top_dir'] + '/zero-cov'
+    ct['pos_cov']      = ct['top_dir'] + '/pos-cov'
 
-    return gpaths, 1
+    if cargs.overwrite:
+        mkdirs(ct, cargs)
+    else:
+        if not cargs.func_search and not cargs.line_search:
+            print "[*] Existing coverage dir %s found, use --overwrite to " \
+                    "re-calculate coverage" % (ct['top_dir'])
+            return 0
+        else:
+            mkdirs(ct, cargs)
 
-def validate_args(gpaths, cargs):
+    write_status(ct['top_dir'] + '/afl-cov-status')
+
+    if not cargs.disable_coverage_init and cargs.coverage_cmd:
+
+        lcov_opts = ''
+        if cargs.enable_branch_coverage:
+            lcov_opts += ' --rc lcov_branch_coverage=1 '
+
+        ### reset code coverage counters - this is done only once as
+        ### afl-cov is spinning up even if AFL is running in parallel mode
+        run_cmd(cargs.lcov_path \
+                + lcov_opts \
+                + " --no-checksum --zerocounters --directory " \
+                + cargs.code_dir, cargs, NO_OUTPUT)
+
+    return 1
+
+def validate_args(cargs):
 
     if cargs.coverage_cmd:
         if 'AFL_FILE' not in cargs.coverage_cmd:
@@ -640,13 +689,6 @@ def validate_args(gpaths, cargs):
             % (cargs.afl_fuzzing_dir)
         return 0
 
-    if os.path.exists(gpaths['top_dir']):
-        if not cargs.overwrite:
-            if not cargs.func_search and not cargs.line_search:
-                print "[*] Existing coverage dir found, use --overwrite to " \
-                        "re-calculate coverage"
-                return 0
-
     if not os.path.exists(cargs.lcov_path):
         print "[*] lcov command does not exist: %s" % (cargs.lcov_path)
         return 0
@@ -658,50 +700,47 @@ def validate_args(gpaths, cargs):
 
     return 1
 
-def init_dir(gpaths, cargs):
-    if cargs.live:
-        while not fuzzing_dir_exists(cargs):
-            if not cargs.background:
-                print "[-] Sleep for %d seconds for AFL fuzzing directory to be created..." \
-                        % cargs.sleep
-            time.sleep(cargs.sleep)
-
-        ### if we make it here then afl-fuzz is presumably running
-        while not is_afl_fuzz_running(cargs):
-            if not cargs.background:
-                print "[-] Sleep for %d seconds waiting for afl-fuzz to be started...." \
+def is_afl_running(cargs):
+    while not fuzzing_dir_exists(cargs):
+        if not cargs.background:
+            print "[-] Sleep for %d seconds for AFL fuzzing directory to be created..." \
                     % cargs.sleep
-            time.sleep(cargs.sleep)
+        time.sleep(cargs.sleep)
+
+    ### if we make it here then afl-fuzz is presumably running
+    while not is_afl_fuzz_running(cargs):
+        if not cargs.background:
+            print "[-] Sleep for %d seconds waiting for afl-fuzz to be started...." \
+                % cargs.sleep
+        time.sleep(cargs.sleep)
+    return
+
+
+def add_dir(fdir, ct):
+    ct['dirs'][fdir] = {}
+    ct['dirs'][fdir]['prev_file'] = ''
+    return
+
+def mkdirs(ct, cargs):
 
     create_cov_dirs = 0
-    if os.path.exists(gpaths['top_dir']):
+    if os.path.exists(ct['top_dir']):
         if cargs.overwrite:
-            rmtree(gpaths['top_dir'])
+            rmtree(ct['top_dir'])
             create_cov_dirs = 1
     else:
         create_cov_dirs = 1
 
     if create_cov_dirs:
         for k in ['top_dir', 'web_dir', 'lcov_dir', 'diff_dir']:
-            os.mkdir(gpaths[k])
+            os.mkdir(ct[k])
 
         ### write coverage results in the following format
-        cfile = open(gpaths['id_delta_cov'], 'w')
+        cfile = open(ct['id_delta_cov'], 'w')
         cfile.write("# id:NNNNNN*_file, cycle, src_file, coverage_type, fcn/line\n")
         cfile.close()
 
-    if not cargs.disable_coverage_init \
-            and create_cov_dirs and cargs.coverage_cmd:
-        lcov_opts = ''
-        if cargs.enable_branch_coverage:
-            lcov_opts += ' --rc lcov_branch_coverage=1 '
-        ### reset code coverage counters
-        run_cmd(cargs.lcov_path \
-                + lcov_opts \
-                + " --no-checksum --zerocounters --directory " \
-                + cargs.code_dir, cargs, NO_OUTPUT)
-
-    return 1
+    return
 
 def fuzzing_dir_exists(cargs):
     if not os.path.exists(cargs.afl_fuzzing_dir):
@@ -714,7 +753,7 @@ def logr(pstr, cargs):
     append_file(pstr, cargs.afl_fuzzing_dir + '/cov/afl-cov.log')
     return
 
-def handle_cmdline():
+def parse_cmdline():
 
     p = argparse.ArgumentParser()
 
