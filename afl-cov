@@ -129,21 +129,20 @@ def process_afl_test_cases(cargs):
 
                 if cargs.coverage_cmd:
                     ### execute the command to generate code coverage stats
-                    ### for the current AFL queue file
+                    ### for the current AFL test case file
                     run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
                             cov_tracking, cargs, NO_OUTPUT)
 
-                    ### collect the code coverage stats
+                    ### collect the code coverage stats for this test case
                     gen_coverage(fuzz_dir, cov_tracking, cargs)
 
-                    ### extract and write out the coverage result for this
-                    ### id:NNNNNN* test case
+                    ### extract and write out the coverage results
                     append_id_delta_cov(gcov, curr_cycle, fuzz_dir,
                             cov_tracking, cargs)
 
                     ### diff to the previous code coverage and look for
                     ### new lines/functions
-                    if num_files > 0:
+                    if cov_tracking['dirs'][fuzz_dir]['prev_file']:
                         zero_cov = coverage_diff(fuzz_dir, cov_tracking,
                                 f, cargs)
 
@@ -161,9 +160,11 @@ def process_afl_test_cases(cargs):
                     if found and not cargs.live:
                         break
 
-                if cargs.afl_queue_id_limit and num_files > cargs.afl_queue_id_limit:
+                if cargs.afl_queue_id_limit \
+                        and num_files > cargs.afl_queue_id_limit:
                     logr("[+] queue/ id limit of %d reached..." \
-                            % cargs.afl_queue_id_limit, cov_tracking['log_file'], cargs)
+                            % cargs.afl_queue_id_limit,
+                            cov_tracking['log_file'], cargs)
                     break
 
         if cargs.live:
