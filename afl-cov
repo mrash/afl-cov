@@ -131,24 +131,25 @@ def process_afl_test_cases(cargs):
                 if cargs.coverage_cmd:
                     ### execute the command to generate code coverage stats
                     ### for the current AFL queue file
-                    run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f), \
+                    run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
                             cargs, NO_OUTPUT)
 
                     ### collect the code coverage stats
-                    gen_coverage(ct, cargs)
+                    gen_coverage(fuzz_dir, cov_tracking, cargs)
 
                     ### extract and write out the coverage result for this
                     ### id:NNNNNN* test case
-                    append_id_delta_cov(gcov, curr_cycle, ct, \
-                            cov_tracking['id_delta_cov'], cargs)
+                    append_id_delta_cov(gcov, curr_cycle, fuzz_dir,
+                            cov_tracking, cargs)
 
                     ### diff to the previous code coverage and look for
                     ### new lines/functions
                     if num_files > 0:
-                        zero_cov = coverage_diff(ct, f, cargs)
+                        zero_cov = coverage_diff(fuzz_dir, cov_tracking,
+                                f, cargs)
 
                     if not cargs.disable_lcov_web and cargs.lcov_web_all:
-                        gen_web_cov_report(ct, cov_tracking['web_dir'], cargs)
+                        gen_web_cov_report(fuzz_dir, cov_tracking, cargs)
 
                 ct['prev_file'] = f
                 num_files += 1
@@ -187,8 +188,7 @@ def process_afl_test_cases(cargs):
         write_pos_cov(cov_tracking['pos_cov'], gcov, cargs)
 
         if not cargs.disable_lcov_web:
-            gen_web_cov_report(cov_tracking['dirs'][fuzz_dir], \
-                    cov_tracking['web_dir'], cargs)
+            gen_web_cov_report(fuzz_dir, cov_tracking, cargs)
 
         if not found:
             if cargs.func_search:
@@ -204,7 +204,9 @@ def process_afl_test_cases(cargs):
 
     return rv
 
-def coverage_diff(ct, afl_file, cargs):
+def coverage_diff(fuzz_dir, cov_tracking, afl_file, cargs):
+
+    ct = cov_tracking['dirs'][fuzz_dir]
 
     a = ct['prev_file']
     b = afl_file
@@ -308,7 +310,10 @@ def append_file(pstr, path):
     f.close()
     return
 
-def append_id_delta_cov(gcov, curr_cycle, ct, delta_file, cargs):
+def append_id_delta_cov(gcov, curr_cycle, fuzz_dir, cov_tracking, cargs):
+
+    ct = cov_tracking['dirs'][fuzz_dir]
+    delta_file = cov_tracking['id_delta_cov']
 
     pos_cov = extract_coverage(ct['lcov_info_final'], cargs)[1]
 
@@ -435,7 +440,9 @@ def get_cycle_num(id_num, cargs):
 
     return cycle_num
 
-def gen_coverage(c, cargs):
+def gen_coverage(fuzz_dir, cov_tracking, cargs):
+
+    ct = cov_tracking['dirs'][fuzz_dir]
 
     lcov_opts = ''
     if cargs.enable_branch_coverage:
@@ -446,28 +453,28 @@ def gen_coverage(c, cargs):
             + " --no-checksum --capture --initial" \
             + " --directory " + cargs.code_dir \
             + " --output-file " \
-            + c['lcov_base'], \
+            + ct['lcov_base'], \
             cargs, NO_OUTPUT)
 
     run_cmd(cargs.lcov_path \
             + lcov_opts
             + " --no-checksum --capture --directory " \
             + cargs.code_dir + " --output-file " \
-            + c['lcov_info'], \
+            + ct['lcov_info'], \
             cargs, NO_OUTPUT)
 
     run_cmd(cargs.lcov_path \
             + lcov_opts
-            + " --no-checksum -a " + c['lcov_base'] \
-            + " -a " + c['lcov_info'] \
-            + " --output-file " + c['lcov_info_final'], \
+            + " --no-checksum -a " + ct['lcov_base'] \
+            + " -a " + ct['lcov_info'] \
+            + " --output-file " + ct['lcov_info_final'], \
             cargs, NO_OUTPUT)
 
     out = run_cmd(cargs.lcov_path \
             + lcov_opts
-            + " --no-checksum -r " + c['lcov_info'] \
+            + " --no-checksum -r " + ct['lcov_info'] \
             + " /usr/include/*  --output-file " \
-            + c['lcov_info_final'], cargs, WANT_OUTPUT)
+            + ct['lcov_info_final'], cargs, WANT_OUTPUT)
 
     for line in out.splitlines():
         m = re.search('^\s+(lines\.\..*\:\s.*)', line)
@@ -484,7 +491,11 @@ def gen_coverage(c, cargs):
                         logr("    " + m.group(1), cargs)
     return
 
-def gen_web_cov_report(ct, web_dir, cargs):
+def gen_web_cov_report(fuzz_dir, cov_tracking, cargs):
+
+    ct = cov_tracking['dirs'][fuzz_dir]
+
+    web_dir = cov_tracking['web_dir']
 
     os.mkdir(ct['lcov_web_dir'])
     genhtml_opts = ''
