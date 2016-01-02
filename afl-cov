@@ -564,31 +564,44 @@ def is_afl_fuzz_running(cargs):
 def gen_paths(fuzz_dir, cov_tracking, afl_file, cargs):
 
     basename = os.path.basename(afl_file)
+    basedir  = os.path.basename(fuzz_dir)
 
     ct = cov_tracking['dirs'][fuzz_dir]
 
+    for k in ['diff_dir', 'web_dir', 'lcov_dir']:
+        if not os.path.exists(cov_tracking[k] + '/' + basedir):
+                os.mkdir(cov_tracking[k] + '/' + basedir)
+
     ### coverage diffs from one ID file to the next
-    ct['diff'] = cov_tracking['diff_dir'] + '/' + basename
+    ct['diff'] = cov_tracking['diff_dir'] + '/' + basedir + '/' + basename
 
     ### current id:NNNNNN* test case file
-    ct['id_file'] = basename
+    ct['id_file'] = basedir + '/' + basename
 
     ### web files
-    ct['lcov_web_dir'] = cov_tracking['web_dir'] + '/' + basename
+    ct['lcov_web_dir'] = cov_tracking['web_dir'] + \
+            '/' + basedir + '/' + basename
 
     ### raw lcov files
-    ct['lcov_base'] = cov_tracking['lcov_dir'] + '/' + basename + '.lcov_base'
-    ct['lcov_info'] = cov_tracking['lcov_dir'] + '/' + basename + '.lcov_info'
+    ct['lcov_base'] = cov_tracking['lcov_dir'] + \
+            '/' + basedir + '/' + basename + '.lcov_base'
+
+    ct['lcov_info'] = cov_tracking['lcov_dir'] + \
+            '/' + basedir + '/' + basename + '.lcov_info'
+
     ct['lcov_info_final'] = cov_tracking['lcov_dir'] + '/' \
-            + basename + '.lcov_info_final'
+            + basedir + '/' + basename + '.lcov_info_final'
 
     if ct['prev_file']:
         ct['prev_lcov_base'] = cov_tracking['lcov_dir'] + '/' \
-                + os.path.basename(ct['prev_file']) + '.lcov_base'
+                + basedir + '/' + os.path.basename(ct['prev_file']) \
+                + '.lcov_base'
         ct['prev_lcov_info'] = cov_tracking['lcov_dir'] + '/' \
-                + os.path.basename(ct['prev_file']) + '.lcov_info'
+                + basedir + '/' + os.path.basename(ct['prev_file']) \
+                + '.lcov_info'
         ct['prev_lcov_info_final'] = cov_tracking['lcov_dir'] + \
-                '/' + os.path.basename(ct['prev_file']) + '.lcov_info_final'
+                '/' + basedir + '/' + os.path.basename(ct['prev_file']) \
+                + '.lcov_info_final'
     return
 
 def run_cmd(cmd, cov_tracking, cargs, collect):
