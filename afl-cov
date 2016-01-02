@@ -90,8 +90,6 @@ def process_afl_test_cases(cargs):
     tot_files = 0
 
     afl_files = []
-    global_pos_cov  = {}
-    global_zero_cov = {}
     cov_tracking    = {}
     zero_cov        = {}
     gcov            = {}
@@ -200,7 +198,8 @@ def process_afl_test_cases(cargs):
                 logr("[-] Line %s not found..." % cargs.line_search, cargs)
                 rv = 0
     else:
-        logr("[*] Did not find any AFL test cases, exiting.\n", cargs)
+        if rv:
+            logr("[*] Did not find any AFL test cases, exiting.\n", cargs)
         rv = 0
 
     return rv
