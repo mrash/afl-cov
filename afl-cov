@@ -91,9 +91,11 @@ def process_afl_test_cases(cargs):
 
     afl_files = []
     cov_paths = {}
-    zero_cov  = {}
-    pos_cov   = {}
     fuzz_dir  = ''
+
+    cov         = {}
+    cov['zero'] = {}
+    cov['pos']  = {}
 
     curr_file      = ''
     curr_lcov_base = ''
@@ -147,18 +149,14 @@ def process_afl_test_cases(cargs):
                     run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
                             cov_paths, cargs, NO_OUTPUT)
 
-                    ### collect the code coverage stats for this test case
+                    ### generate the code coverage stats for this test case
                     gen_coverage(fuzz_dir, cov_paths, cargs)
 
-                    ### extract and write out the coverage results
-                    append_id_delta_cov(pos_cov, curr_cycle, fuzz_dir,
-                            cov_paths, cargs)
-
-                    ### diff to the previous code coverage and look for
-                    ### new lines/functions
+                    ### diff to the previous code coverage, look for new
+                    ### lines/functions, and write out results
                     if cov_paths['dirs'][fuzz_dir]['prev_file']:
-                        zero_cov = coverage_diff(fuzz_dir, cov_paths,
-                                f, cargs)
+                        coverage_diff(curr_cycle, fuzz_dir, cov_paths,
+                                f, cov, cargs)
 
                     if not cargs.disable_lcov_web and cargs.lcov_web_all:
                         gen_web_cov_report(fuzz_dir, cov_paths, cargs)
@@ -207,8 +205,8 @@ def process_afl_test_cases(cargs):
                 cov_paths['log_file'], cargs)
 
         ### write out the final zero coverage and positive coverage reports
-        write_zero_cov(zero_cov, cov_paths, cargs)
-        write_pos_cov(pos_cov, cov_paths, cargs)
+        write_zero_cov(cov['zero'], cov_paths, cargs)
+        write_pos_cov(cov['pos'], cov_paths, cargs)
 
         if not cargs.disable_lcov_web:
             gen_web_cov_report(fuzz_dir, cov_paths, cargs)
@@ -230,7 +228,7 @@ def process_afl_test_cases(cargs):
 
     return rv
 
-def coverage_diff(fuzz_dir, cov_paths, afl_file, cargs):
+def coverage_diff(cycle_num, fuzz_dir, cov_paths, afl_file, cov, cargs):
 
     ct = cov_paths['dirs'][fuzz_dir]
 
@@ -240,49 +238,81 @@ def coverage_diff(fuzz_dir, cov_paths, afl_file, cargs):
     b_file = os.path.basename(afl_file)
     b_dir  = os.path.basename(fuzz_dir)
 
-    (old_zero_cov, old_pos_cov) \
-            = extract_coverage(ct['prev_lcov_info_final'], cargs)
-
-    ### with the coverage from the previous lcov results extracted,
-    ### we remove associated files unless instructed to keep them
+    ### with the coverage from the previous lcov results extracted
+    ### the previous time we went through this function, we remove
+    ### associated files unless instructed to keep them
     if not cargs.preserve_all_lcov_files:
         rm_prev_cov_files(ct)
 
-    (new_zero_cov, new_pos_cov) \
-            = extract_coverage(ct['lcov_info_final'], cargs)
+    new_cov = extract_coverage(ct['lcov_info_final'], cargs)
 
-    ### diff the two dictionaries
-    printed_diff_header = 0
-    for f in old_zero_cov:
-        printed_file = 0
-        if f in new_zero_cov:
-            for ctype in old_zero_cov[f]:
-                for val in sorted(old_zero_cov[f][ctype]):
-                    if val not in new_zero_cov[f][ctype]:
-                        if not printed_diff_header:
-                            logr("\n    Coverage diff %s/%s %s/%s" \
-                                    % (a_dir, a_file, b_dir, b_file),
-                                    cov_paths['log_file'], cargs)
-                            pstr = "diff %s/%s -> %s/%s" % (a_dir, a_file,
-                                    b_dir, b_file)
-                            logr(pstr, cov_paths['log_file'], cargs)
-                            append_file(pstr, ct['diff'])
-                            printed_diff_header = 1
+    log_lines = []
+    delta_log_lines = []
+    print_diff_header = 1
 
-                        if not printed_file:
-                            pstr = "Src file: " + f
-                            logr(pstr, cov_paths['log_file'], cargs)
-                            append_file(pstr, ct['diff'])
-                            printed_file = 1
+    ### We aren't interested in the number of times AFL has executed
+    ### a line or function (since we can't really get this anyway because
+    ### gcov stats aren't influenced by AFL directly) - what we want is
+    ### simply whether a new line or function has been executed by this
+    ### test case. So, we look for new positive coverage.
+    for f in new_cov['pos']:
+        print_filename = 1
+        if f not in cov['zero'] and f not in cov['pos']: ### completely new file
+            cov_init(f, cov)
+            if print_diff_header:
+                log_lines.append("diff %s/%s -> %s/%s" % \
+                        (a_dir, a_file, b_dir, b_file))
+                print_diff_header = 0
+            log_lines.append("New src file: " + f)
+            for ctype in new_cov['pos'][f]:
+                for val in sorted(new_cov['pos'][f][ctype]):
+                    cov['pos'][f][ctype][val] = ''
+                    log_lines.append("  New '" + ctype + "' coverage: " + val)
+                    if ctype == 'line':
+                        if cargs.coverage_include_lines:
+                            delta_log_lines.append("%s, %s, %s, %s, %s\n" \
+                                    % (ct['id_file'], cycle_num, f, ctype, val))
+                    else:
+                        delta_log_lines.append("%s, %s, %s, %s, %s\n" \
+                                % (ct['id_file'], cycle_num, f, ctype, val))
+        elif f in cov['zero'] and f in cov['pos']:
+            for ctype in new_cov['pos'][f]:
+                for val in sorted(new_cov['pos'][f][ctype]):
+                    if val not in cov['pos'][f][ctype]:
+                        cov['pos'][f][ctype][val] = ''
+                        if print_diff_header:
+                            log_lines.append("diff %s/%s -> %s/%s" % \
+                                    (a_dir, a_file, b_dir, b_file))
+                            print_diff_header = 0
+                        if print_filename:
+                            log_lines.append("Src file: " + f)
+                            print_filename = 0
+                        log_lines.append("  New '" + ctype + "' coverage: " + val)
+                        if ctype == 'line':
+                            if cargs.coverage_include_lines:
+                                delta_log_lines.append("%s, %s, %s, %s, %s\n" \
+                                        % (ct['id_file'], cycle_num, f, \
+                                        ctype, val))
+                        else:
+                            delta_log_lines.append("%s, %s, %s, %s, %s\n" \
+                                    % (ct['id_file'], cycle_num, f, \
+                                    ctype, val))
 
-                        pstr = "  New '" + ctype + "' coverage: " + val
-                        logr(pstr, cov_paths['log_file'], cargs)
-                        append_file(pstr, ct['diff'])
-
-    if printed_diff_header:
+    if len(log_lines):
+        logr("\n    Coverage diff %s/%s %s/%s" \
+            % (a_dir, a_file, b_dir, b_file),
+            cov_paths['log_file'], cargs)
+        for l in log_lines:
+            logr(l, cov_paths['log_file'], cargs)
         logr("", cov_paths['log_file'], cargs)
 
-    return new_zero_cov
+    if len(delta_log_lines):
+        cfile = open(cov_paths['id_delta_cov'], 'a')
+        for l in delta_log_lines:
+            cfile.write(l)
+        cfile.close()
+
+    return
 
 def write_zero_cov(zero_cov, cov_paths, cargs):
 
@@ -299,7 +329,7 @@ def write_zero_cov(zero_cov, cov_paths, cargs):
 
 def write_pos_cov(pos_cov, cov_paths, cargs):
 
-    cpath = cov_paths['zero_cov']
+    cpath = cov_paths['pos_cov']
 
     logr("[+] Final positive coverage report: %s" % cpath,
             cov_paths['log_file'], cargs)
@@ -347,48 +377,20 @@ def append_file(pstr, path):
     f.close()
     return
 
-def append_id_delta_cov(pos_cov, curr_cycle, fuzz_dir, cov_paths, cargs):
-
-    ct = cov_paths['dirs'][fuzz_dir]
-    delta_file = cov_paths['id_delta_cov']
-
-    tmp_cov = extract_coverage(ct['lcov_info_final'], cargs)[1]
-
-    cfile = open(delta_file, 'a')
-    for f in tmp_cov:
-        if f not in pos_cov:
-            cov_init(f, pos_cov)
-        for ctype in sorted(tmp_cov[f]):
-            if ctype == 'function':
-                for val in sorted(tmp_cov[f][ctype]):
-                    if val not in pos_cov[f][ctype]:
-                        pos_cov[f][ctype][val] = ''
-                        cfile.write("%s, %s, %s, %s, %s\n" \
-                                % (ct['id_file'],
-                                    curr_cycle, f, ctype, val))
-            elif ctype == 'line':
-                if cargs.coverage_include_lines:
-                    for val in sorted(tmp_cov[f][ctype], key=int):
-                        if val not in pos_cov[f][ctype]:
-                            pos_cov[f][ctype][val] = ''
-                            cfile.write("%s, %s, %s, %s, %s\n" \
-                                    % (ct['id_file'],
-                                        curr_cycle, f, ctype, val))
-    cfile.close()
-
-    return
-
 def cov_init(cfile, cov):
-    cov[cfile] = {}
-    cov[cfile]['function'] = {}
-    cov[cfile]['line'] = {}
+    for k in ['zero', 'pos']:
+        if k not in cov:
+            cov[k] = {}
+        if cfile not in cov[k]:
+            cov[k][cfile] = {}
+            cov[k][cfile]['function'] = {}
+            cov[k][cfile]['line'] = {}
     return
 
 def extract_coverage(lcov_file, cargs):
 
     search_rv = 0
-    zero_cov  = {}
-    pos_cov   = {}
+    tmp_cov = {}
 
     ### populate old lcov output for functions/lines that were called
     ### zero times
@@ -400,8 +402,7 @@ def extract_coverage(lcov_file, cargs):
             m = re.search('SF:(\S+)', line)
             if m and m.group(1):
                 current_file = m.group(1)
-                cov_init(current_file, zero_cov)
-                cov_init(current_file, pos_cov)
+                cov_init(current_file, tmp_cov)
                 continue
 
             if current_file:
@@ -410,9 +411,9 @@ def extract_coverage(lcov_file, cargs):
                     fcn = m.group(2) + '()'
                     if m.group(1) == '0':
                         ### the function was never called
-                        zero_cov[current_file]['function'][fcn] = ''
+                        tmp_cov['zero'][current_file]['function'][fcn] = ''
                     else:
-                        pos_cov[current_file]['function'][fcn] = ''
+                        tmp_cov['pos'][current_file]['function'][fcn] = ''
                     continue
 
                 ### look for lines that were never called
@@ -421,11 +422,11 @@ def extract_coverage(lcov_file, cargs):
                     lnum = m.group(1)
                     if m.group(2) == '0':
                         ### the line was never executed
-                        zero_cov[current_file]['line'][lnum] = ''
+                        tmp_cov['zero'][current_file]['line'][lnum] = ''
                     else:
-                        pos_cov[current_file]['line'][lnum] = ''
+                        tmp_cov['pos'][current_file]['line'][lnum] = ''
 
-    return zero_cov, pos_cov
+    return tmp_cov
 
 def search_cov(cov_paths, cargs):
 
@@ -817,7 +818,7 @@ def fuzzing_dir_exists(cargs):
 def logr(pstr, log_file, cargs):
     if not cargs.background and not cargs.quiet:
         print "    " + pstr
-    append_file(pstr, cargs.afl_fuzzing_dir + '/cov/afl-cov.log')
+    append_file(pstr, log_file)
     return
 
 def parse_cmdline():
