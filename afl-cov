@@ -89,11 +89,16 @@ def process_afl_test_cases(cargs):
     found = 0
     tot_files = 0
 
-    afl_files = []
-    cov_tracking    = {}
-    zero_cov        = {}
-    gcov            = {}
-    fuzz_dir        = ''
+    afl_files    = []
+    cov_tracking = {}
+    zero_cov     = {}
+    gcov         = {}
+    fuzz_dir     = ''
+
+    curr_file      = ''
+    curr_lcov_base = ''
+    curr_lcov_info = ''
+    curr_lcov_info_final = ''
 
     while True:
 
@@ -101,11 +106,13 @@ def process_afl_test_cases(cargs):
             rv = 0
             break
 
+        dir_ctr = 0
         for fuzz_dir in cov_tracking['dirs']:
 
             num_files = 0
             new_files = []
             tmp_files = import_test_cases(fuzz_dir + '/queue')
+            dir_ctr  += 1
 
             for f in tmp_files:
                 if f not in afl_files:
@@ -126,6 +133,13 @@ def process_afl_test_cases(cargs):
                         curr_cycle), cov_tracking['log_file'], cargs)
 
                 gen_paths(fuzz_dir, cov_tracking, f, cargs)
+
+                if dir_ctr > 1 and curr_file \
+                        and not cov_tracking['dirs'][fuzz_dir]['prev_file']:
+                    cov_tracking['dirs'][fuzz_dir]['prev_file'] = curr_file
+                    cov_tracking['dirs'][fuzz_dir]['prev_lcov_base'] = curr_lcov_base
+                    cov_tracking['dirs'][fuzz_dir]['prev_lcov_info'] = curr_lcov_info
+                    cov_tracking['dirs'][fuzz_dir]['prev_lcov_info_final'] = curr_lcov_info_final
 
                 if cargs.coverage_cmd:
                     ### execute the command to generate code coverage stats
@@ -148,6 +162,12 @@ def process_afl_test_cases(cargs):
 
                     if not cargs.disable_lcov_web and cargs.lcov_web_all:
                         gen_web_cov_report(fuzz_dir, cov_tracking, cargs)
+
+                if dir_ctr == 1:
+                    curr_file      = f
+                    curr_lcov_base = cov_tracking['dirs'][fuzz_dir]['lcov_base']
+                    curr_lcov_info = cov_tracking['dirs'][fuzz_dir]['lcov_info']
+                    curr_lcov_info_final = cov_tracking['dirs'][fuzz_dir]['lcov_info_final']
 
                 cov_tracking['dirs'][fuzz_dir]['prev_file'] = f
 
@@ -214,8 +234,11 @@ def coverage_diff(fuzz_dir, cov_tracking, afl_file, cargs):
 
     ct = cov_tracking['dirs'][fuzz_dir]
 
-    a = ct['prev_file']
-    b = afl_file
+    a_file = os.path.basename(ct['prev_file'])
+    a_dir  = os.path.basename(os.path.dirname(ct['prev_lcov_info_final']))
+
+    b_file = os.path.basename(afl_file)
+    b_dir  = os.path.basename(fuzz_dir)
 
     (old_zero_cov, old_pos_cov) \
             = extract_coverage(ct['prev_lcov_info_final'], cargs)
@@ -237,11 +260,11 @@ def coverage_diff(fuzz_dir, cov_tracking, afl_file, cargs):
                 for val in sorted(old_zero_cov[f][ctype]):
                     if val not in new_zero_cov[f][ctype]:
                         if not printed_diff_header:
-                            logr("\n    Coverage diff %s %s" \
-                                    % (os.path.basename(a), os.path.basename(b)),
+                            logr("\n    Coverage diff %s/%s %s/%s" \
+                                    % (a_dir, a_file, b_dir, b_file),
                                     cov_tracking['log_file'], cargs)
-                            pstr = "diff %s -> %s" % (os.path.basename(a),
-                                    os.path.basename(b))
+                            pstr = "diff %s/%s -> %s/%s" % (a_dir, a_file,
+                                    b_dir, b_file)
                             logr(pstr, cov_tracking['log_file'], cargs)
                             append_file(pstr, ct['diff'])
                             printed_diff_header = 1
