@@ -92,7 +92,7 @@ def process_afl_test_cases(cargs):
     afl_files    = []
     cov_tracking = {}
     zero_cov     = {}
-    gcov         = {}
+    pos_cov      = {}
     fuzz_dir     = ''
 
     curr_file      = ''
@@ -151,7 +151,7 @@ def process_afl_test_cases(cargs):
                     gen_coverage(fuzz_dir, cov_tracking, cargs)
 
                     ### extract and write out the coverage results
-                    append_id_delta_cov(gcov, curr_cycle, fuzz_dir,
+                    append_id_delta_cov(pos_cov, curr_cycle, fuzz_dir,
                             cov_tracking, cargs)
 
                     ### diff to the previous code coverage and look for
@@ -208,7 +208,7 @@ def process_afl_test_cases(cargs):
 
         ### write out the final zero coverage and positive coverage reports
         write_zero_cov(zero_cov, cov_tracking, cargs)
-        write_pos_cov(gcov, cov_tracking, cargs)
+        write_pos_cov(pos_cov, cov_tracking, cargs)
 
         if not cargs.disable_lcov_web:
             gen_web_cov_report(fuzz_dir, cov_tracking, cargs)
@@ -297,7 +297,7 @@ def write_zero_cov(zero_cov, cov_tracking, cargs):
     write_cov(cpath, zero_cov, cargs)
     return
 
-def write_pos_cov(gcov, cov_tracking, cargs):
+def write_pos_cov(pos_cov, cov_tracking, cargs):
 
     cpath = cov_tracking['zero_cov']
 
@@ -308,7 +308,7 @@ def write_pos_cov(gcov, cov_tracking, cargs):
     cfile.write("# least one AFL test case. See the cov/id-delta-cov file\n")
     cfile.write("# for more information.\n")
     cfile.close()
-    write_cov(cpath, gcov, cargs)
+    write_cov(cpath, pos_cov, cargs)
     return
 
 def write_cov(cpath, cov, cargs):
@@ -347,30 +347,30 @@ def append_file(pstr, path):
     f.close()
     return
 
-def append_id_delta_cov(gcov, curr_cycle, fuzz_dir, cov_tracking, cargs):
+def append_id_delta_cov(pos_cov, curr_cycle, fuzz_dir, cov_tracking, cargs):
 
     ct = cov_tracking['dirs'][fuzz_dir]
     delta_file = cov_tracking['id_delta_cov']
 
-    pos_cov = extract_coverage(ct['lcov_info_final'], cargs)[1]
+    tmp_cov = extract_coverage(ct['lcov_info_final'], cargs)[1]
 
     cfile = open(delta_file, 'a')
-    for f in pos_cov:
-        if f not in gcov:
-            cov_init(f, gcov)
-        for ctype in sorted(pos_cov[f]):
+    for f in tmp_cov:
+        if f not in pos_cov:
+            cov_init(f, pos_cov)
+        for ctype in sorted(tmp_cov[f]):
             if ctype == 'function':
-                for val in sorted(pos_cov[f][ctype]):
-                    if val not in gcov[f][ctype]:
-                        gcov[f][ctype][val] = ''
+                for val in sorted(tmp_cov[f][ctype]):
+                    if val not in pos_cov[f][ctype]:
+                        pos_cov[f][ctype][val] = ''
                         cfile.write("%s, %s, %s, %s, %s\n" \
                                 % (ct['id_file'],
                                     curr_cycle, f, ctype, val))
             elif ctype == 'line':
                 if cargs.coverage_include_lines:
-                    for val in sorted(pos_cov[f][ctype], key=int):
-                        if val not in gcov[f][ctype]:
-                            gcov[f][ctype][val] = ''
+                    for val in sorted(tmp_cov[f][ctype], key=int):
+                        if val not in pos_cov[f][ctype]:
+                            pos_cov[f][ctype][val] = ''
                             cfile.write("%s, %s, %s, %s, %s\n" \
                                     % (ct['id_file'],
                                         curr_cycle, f, ctype, val))
