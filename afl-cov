@@ -311,6 +311,7 @@ def coverage_diff(cycle_num, fuzz_dir, cov_paths, afl_file, cov, cargs):
             cov_paths['log_file'], cargs)
         for l in log_lines:
             logr(l, cov_paths['log_file'], cargs)
+            append_file(l, ct['diff'])
         logr("", cov_paths['log_file'], cargs)
 
     if len(delta_log_lines):
