@@ -244,15 +244,17 @@ id:000002,orig:somestr384.start, 3, /path/to/project-gcov/file.c, function, vali
 `afl-cov` creates a few files and directories for coverage results within the
 specified `afl-fuzz` directory (`-d`). These files and directories are
 displayed below, and all are contained within the main
-`/path/to/afl-fuzz-output/cov/` directory:
+`/path/to/afl-fuzz-output/cov/` directory. Note that `<dirname>` refers to the
+top level directory name for the fuzzing instance. When AFL is parallelized,
+there will be one `<dirname>` directory path for each `afl-fuzz` instance.
 
- * `cov/diff/` - contains new code coverage results when `queue/id:NNNNNN*` file
+ * `cov/diff/<dirname>` - contains new code coverage results when a `queue/id:NNNNNN*` file
                  causes `afl-fuzz` to execute new code.
- * `cov/lcov/` - contains raw code coverage data produced by the lcov front-end to gcov.
- * `cov/web/`  - contains code coverage results in web format produced by `genhtml`.
- * `cov/zero-cov` - file that lists all functions (and optionally lines) that are never
-                    executed by any `afl-fuzz` test case.
- * `cov/pos-cov` - file that lists all functions (and optionally lines) that are
+ * `cov/lcov/<dirname>` - contains raw code coverage data produced by the lcov front-end to gcov.
+ * `cov/web/<dirname>`  - contains code coverage results in web format produced by `genhtml`.
+ * `cov/zero-cov` - file that globally lists all functions (and optionally lines) that
+                    are never executed by any `afl-fuzz` test case.
+ * `cov/pos-cov` - file that globally lists all functions (and optionally lines) that are
                    executed at least once by an `afl-fuzz` test case.
  * `cov/id-delta-cov` - lists the functions (and optionally lines) that are executed by
                         the first `id:000000*` test case, and then lists all new
