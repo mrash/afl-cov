@@ -230,6 +230,10 @@ def process_afl_test_cases(cargs):
 
 def coverage_diff(cycle_num, fuzz_dir, cov_paths, afl_file, cov, cargs):
 
+    log_lines         = []
+    delta_log_lines   = []
+    print_diff_header = 1
+
     ct = cov_paths['dirs'][fuzz_dir]
 
     a_file = os.path.basename(ct['prev_file'])
@@ -245,10 +249,6 @@ def coverage_diff(cycle_num, fuzz_dir, cov_paths, afl_file, cov, cargs):
         rm_prev_cov_files(ct)
 
     new_cov = extract_coverage(ct['lcov_info_final'], cargs)
-
-    log_lines = []
-    delta_log_lines = []
-    print_diff_header = 1
 
     ### We aren't interested in the number of times AFL has executed
     ### a line or function (since we can't really get this anyway because
@@ -297,6 +297,11 @@ def coverage_diff(cycle_num, fuzz_dir, cov_paths, afl_file, cov, cargs):
                             delta_log_lines.append("%s, %s, %s, %s, %s\n" \
                                     % (ct['id_file'], cycle_num, f, \
                                     ctype, val))
+
+    ### now that new positive coverage has been added, reset zero
+    ### coverage to the current new zero coverage
+    cov['zero'] = {}
+    cov['zero'] = new_cov['zero'].copy()
 
     if len(log_lines):
         logr("\n    Coverage diff %s/%s %s/%s" \
