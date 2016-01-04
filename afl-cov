@@ -61,6 +61,9 @@ def main():
     if not validate_args(cargs):
         return exit_failure
 
+    if cargs.func_search or cargs.line_search:
+        return not search_cov(cargs)
+
     if cargs.background:
         run_in_background()
 
@@ -85,22 +88,22 @@ def run_in_background():
 
 def process_afl_test_cases(cargs):
 
-    rv    = 1
-    found = 0
+    rv        = 1
     tot_files = 0
+    fuzz_dir  = ''
 
     afl_files = []
     cov_paths = {}
-    fuzz_dir  = ''
-
-    cov         = {}
-    cov['zero'] = {}
-    cov['pos']  = {}
 
     curr_file      = ''
     curr_lcov_base = ''
     curr_lcov_info = ''
     curr_lcov_info_final = ''
+
+    ### main coverage tracking dictionary
+    cov         = {}
+    cov['zero'] = {}
+    cov['pos']  = {}
 
     while True:
 
@@ -172,12 +175,6 @@ def process_afl_test_cases(cargs):
                 num_files += 1
                 tot_files += 1
 
-                if cargs.func_search or cargs.line_search:
-                    if not found:
-                        found = search_cov(cov_paths, cargs)
-                    if found and not cargs.live:
-                        break
-
                 if cargs.afl_queue_id_limit \
                         and num_files > cargs.afl_queue_id_limit:
                     logr("[+] queue/ id limit of %d reached..." \
@@ -211,15 +208,6 @@ def process_afl_test_cases(cargs):
         if not cargs.disable_lcov_web:
             gen_web_cov_report(fuzz_dir, cov_paths, cargs)
 
-        if not found:
-            if cargs.func_search:
-                logr("[-] Function '%s' not found..." % cargs.func_search,
-                        cov_paths['log_file'], cargs)
-                rv = 0
-            elif cargs.line_search:
-                logr("[-] Line %s not found..." % cargs.line_search,
-                        cov_paths['log_file'], cargs)
-                rv = 0
     else:
         if rv:
             logr("[*] Did not find any AFL test cases, exiting.\n",
@@ -436,11 +424,14 @@ def extract_coverage(lcov_file, cargs):
 
     return tmp_cov
 
-def search_cov(cov_paths, cargs):
+def search_cov(cargs):
 
     search_rv = 0
 
-    with open(cov_paths['id_delta_cov'], 'r') as f:
+    id_delta_file = cargs.afl_fuzzing_dir + '/cov/id-delta-cov'
+    log_file      = cargs.afl_fuzzing_dir + '/cov/afl-cov.log'
+
+    with open(id_delta_file, 'r') as f:
         for line in f:
             line = line.strip()
             ### id:NNNNNN*_file, cycle, src_file, cov_type, fcn/line\n")
@@ -451,12 +442,12 @@ def search_cov(cov_paths, cargs):
                     if cargs.src_file == src_file:
                         logr("[+] Function '%s' in file: '%s' executed by: '%s', cycle: %s" \
                                 % (val, current_file, id_file, cycle_num),
-                                cov_paths['log_file'], cargs)
+                                log_file, cargs)
                         search_rv = 1
                 else:
                     logr("[+] Function '%s' executed by: '%s', cycle: %s" \
                             % (val, id_file, cycle_num),
-                            cov_paths['log_file'], cargs)
+                            log_file, cargs)
                     search_rv = 1
 
             if cargs.src_file == src_file \
@@ -464,8 +455,16 @@ def search_cov(cov_paths, cargs):
                 if cargs.src_file == src_file:
                     logr("[+] Line '%s' in file: '%s' executed by: '%s', cycle: %s" \
                             % (val, current_file, id_file, cycle_num),
-                            cov_paths['log_file'], cargs)
+                            log_file, cargs)
                     search_rv = 1
+
+    if not search_rv:
+        if cargs.func_search:
+            logr("[-] Function '%s' not found..." % cargs.func_search,
+                    log_file, cargs)
+        elif cargs.line_search:
+            logr("[-] Line %s not found..." % cargs.line_search,
+                    log_file, cargs)
 
     return search_rv
 
@@ -754,8 +753,6 @@ def validate_args(cargs):
     if cargs.func_search or cargs.line_search:
         if cargs.func_search and '()' not in cargs.func_search:
             cargs.func_search += '()'
-        if not cargs.verbose and not cargs.coverage_cmd:
-            cargs.quiet = 1
         if cargs.line_search and not cargs.src_file:
             print "[*] Must set --src-file in --line-search mode"
             return 0

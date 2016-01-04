@@ -49,10 +49,12 @@ on a different system. However, most workflows typically focus on producing
 ## Workflow
 At a high level, the general workflow for `afl-cov` against a targeted project is:
 
-1. Have the project compiled and known to work with AFL.
+1. Have a target project compiled and known to work with AFL.
 2. Create a spare copy of the project sources, and compile this copy with gcov profiling support.
-3. Run `afl-cov` against the copy while `afl-fuzz` is building test cases against the original sources.
+3. Run `afl-cov` against the copy while `afl-fuzz` is building test cases against the original
+sources or after `afl-fuzz` has been stopped.
 4. Review the cumulative code coverage results in the final web report.
+5. Iterate.
 
 Now, in more detail:
 
@@ -68,8 +70,8 @@ the output directory used by `afl-fuzz`, and the command to execute along with
 associated arguments. This command and arguments should closely resemble the
 manner in which `afl-fuzz` executes the targeted binary during the fuzzing
 cycle. Note that if there is already an existing directory of AFL fuzzing
-results, then just omit the `--live` argument to process these results.  Here
-is an example:
+results, then just omit the `--live` argument to process the existing results.
+Here is an example:
 
 ```bash
 $ cd /path/to/project-gcov/
