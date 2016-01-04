@@ -263,10 +263,12 @@ def coverage_diff(cycle_num, fuzz_dir, cov_paths, afl_file, cov, cargs):
                 log_lines.append("diff %s/%s -> %s/%s" % \
                         (a_dir, a_file, b_dir, b_file))
                 print_diff_header = 0
-            log_lines.append("New src file: " + f)
             for ctype in new_cov['pos'][f]:
                 for val in sorted(new_cov['pos'][f][ctype]):
                     cov['pos'][f][ctype][val] = ''
+                    if print_filename:
+                        log_lines.append("New src file: " + f)
+                        print_filename = 0
                     log_lines.append("  New '" + ctype + "' coverage: " + val)
                     if ctype == 'line':
                         if cargs.coverage_include_lines:
