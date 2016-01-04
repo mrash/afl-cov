@@ -47,12 +47,14 @@ on a different system. However, most workflows typically focus on producing
 `afl-cov` results simultaneously for current fuzzing runs on the same system.
 
 ## Workflow
-At a high level, the general workflow for `afl-cov` against a targeted project is:
+At a high level, the general workflow for `afl-cov` against a targeted project
+is:
 
 1. Have a target project compiled and known to work with AFL.
-2. Create a spare copy of the project sources, and compile this copy with gcov profiling support.
-3. Run `afl-cov` against the copy while `afl-fuzz` is building test cases against the original
-sources or after `afl-fuzz` has been stopped.
+2. Create a spare copy of the project sources, and compile this copy with gcov
+profiling support.
+3. Run `afl-cov` against the copy while `afl-fuzz` is building test cases
+against the original sources or after `afl-fuzz` has been stopped.
 4. Review the cumulative code coverage results in the final web report.
 5. Iterate.
 
@@ -69,9 +71,9 @@ fuzzing cycle. The command line arguments to `afl-cov` must specify the path to
 the output directory used by `afl-fuzz`, and the command to execute along with
 associated arguments. This command and arguments should closely resemble the
 manner in which `afl-fuzz` executes the targeted binary during the fuzzing
-cycle. Note that if there is already an existing directory of AFL fuzzing
-results, then just omit the `--live` argument to process the existing results.
-Here is an example:
+cycle. If there is already an existing directory of AFL fuzzing results, then
+just omit the `--live` argument to process the existing results. Here is an
+example:
 
 ```bash
 $ cd /path/to/project-gcov/
@@ -80,7 +82,7 @@ $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
 --code-dir .
 ```
 
-Note the `AFL_FILE` string above refers to the test case file that AFL will
+The `AFL_FILE` string above refers to the test case file that AFL will
 build in the `queue/` directory under `/path/to/project-fuzz`. Just leave this
 string as-is - `afl-cov` will automatically substitute it with each AFL
 `queue/id:NNNNNN*` in succession as it builds the code coverage reports.
@@ -204,6 +206,14 @@ opportunity to find bugs.
 
 [AFL-lcov-web-report]: doc/AFL_lcov_web_report.png "AFL lcov web report"
 
+### Parallelized AFL Execution
+With the 0.4 release, `afl-cov` supports parallelized execution runs of
+`afl-fuzz`. All that is required is to point `afl-cov -d sync_dir` at the top
+level sync directory that is used by all `afl-fuzz` instances
+(`afl-fuzz -o sync_dir`). The coverage results are calculated globally
+across all fuzzing instances, and in `--live` mode new instances will be added
+to the coverage results as they are created.
+
 ### Other Examples
 The workflow above is probably the main strategy for using `afl-cov`. However,
 additional use cases are supported such as:
@@ -233,9 +243,9 @@ $ ./afl-cov -d /path/to/afl-fuzz-output --func-search "validate_cmd_msg"
 [+] Function 'validate_cmd_mag()' executed by: id:000002,orig:somestr384.start
 ```
 
-An equivalent way of searching the coverage results is to just `grep` the function
-from the `cov/id-delta-cov` file described below. Note the number _"3"_ in the output
-below is the AFL cycle number where the function is first executed:
+An equivalent way of searching the coverage results is to just `grep` the
+function from the `cov/id-delta-cov` file described below. The number _"3"_ in
+the output below is the AFL cycle number where the function is first executed:
 
 ```bash
 $ grep validate_cmd_msg /path/to/afl-fuzz-output/cov/id-delta-cov
@@ -246,7 +256,7 @@ id:000002,orig:somestr384.start, 3, /path/to/project-gcov/file.c, function, vali
 `afl-cov` creates a few files and directories for coverage results within the
 specified `afl-fuzz` directory (`-d`). These files and directories are
 displayed below, and all are contained within the main
-`/path/to/afl-fuzz-output/cov/` directory. Note that `<dirname>` refers to the
+`/path/to/afl-fuzz-output/cov/` directory and `<dirname>` refers to the
 top level directory name for the fuzzing instance. When AFL is parallelized,
 there will be one `<dirname>` directory path for each `afl-fuzz` instance.
 
@@ -267,10 +277,13 @@ Basic `--help` output appears below:
 
     usage: afl-cov [-h] [-e COVERAGE_CMD] [-d AFL_FUZZING_DIR] [-c CODE_DIR] [-O]
                [--disable-cmd-redirection] [--disable-lcov-web]
-               [--disable-coverage-init] [--coverage-include-lines] [--live]
-               [--sleep SLEEP] [--lcov-web-all] [--func-search FUNC_SEARCH]
-               [--line-search LINE_SEARCH] [--src-file SRC_FILE]
-               [--afl-queue-id-limit AFL_QUEUE_ID_LIMIT] [-v] [-V] [-q]
+               [--disable-coverage-init] [--coverage-include-lines]
+               [--enable-branch-coverage] [--live] [--sleep SLEEP]
+               [--background] [--lcov-web-all] [--preserve-all-lcov-files]
+               [--func-search FUNC_SEARCH] [--line-search LINE_SEARCH]
+               [--src-file SRC_FILE] [--afl-queue-id-limit AFL_QUEUE_ID_LIMIT]
+               [--lcov-path LCOV_PATH] [--genhtml-path GENHTML_PATH] [-v] [-V]
+               [-q]
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -292,12 +305,19 @@ Basic `--help` output appears below:
                             afl-cov startup
       --coverage-include-lines
                             include lines in zero-coverage status files
+      --enable-branch-coverage
+                            include branch coverage in code coverage reports (may
+                            be slow)
       --live                process a live AFL directory, and afl-cov will exit
                             when it appears afl-fuzz has been stopped
       --sleep SLEEP         In --live mode, # of seconds to sleep between checking
                             for new queue files
+      --background          background mode - if also in --live mode, will exit
+                            when the alf-fuzz process is finished
       --lcov-web-all        generate lcov web reports for all id:NNNNNN* files
                             instead of just the last one
+      --preserve-all-lcov-files
+                            Keep all lcov files (not usually necessary)
       --func-search FUNC_SEARCH
                             search for coverage of a specific function
       --line-search LINE_SEARCH
@@ -308,6 +328,10 @@ Basic `--help` output appears below:
       --afl-queue-id-limit AFL_QUEUE_ID_LIMIT
                             limit the number of id:NNNNNN* files processed in the
                             AFL queue/ directory
+      --lcov-path LCOV_PATH
+                            path to lcov command
+      --genhtml-path GENHTML_PATH
+                            path to genhtml command
       -v, --verbose         verbose mode
       -V, --version         print version and exit
       -q, --quiet           quiet mode
