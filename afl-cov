@@ -724,10 +724,11 @@ def init_tracking(ct, cargs):
     if cargs.overwrite:
         mkdirs(ct, cargs)
     else:
-        if not cargs.func_search and not cargs.line_search:
-            print "[*] Existing coverage dir %s found, use --overwrite to " \
-                    "re-calculate coverage" % (ct['top_dir'])
-            return 0
+        if os.path.exists(ct['top_dir']):
+            if not cargs.func_search and not cargs.line_search:
+                print "[*] Existing coverage dir %s found, use --overwrite to " \
+                        "re-calculate coverage" % (ct['top_dir'])
+                return 0
         else:
             mkdirs(ct, cargs)
 
