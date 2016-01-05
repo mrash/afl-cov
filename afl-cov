@@ -563,8 +563,13 @@ def gen_web_cov_report(fuzz_dir, cov_paths, cargs):
     logr("[+] Final lcov web report: %s" \
             % web_dir + '/lcov-web-final.html',
             cov_paths['log_file'], cargs)
-    os.symlink(ct['lcov_web_dir'] + '/index.html',
-            web_dir + '/lcov-web-final.html')
+
+    if ct['lcov_web_dir'][0] == '/':
+        os.symlink(ct['lcov_web_dir'] + '/index.html',
+                web_dir + '/lcov-web-final.html')
+    else:
+        os.symlink(os.getcwd() + '/' + ct['lcov_web_dir'] \
+                + '/index.html', web_dir + '/lcov-web-final.html')
 
     return
 
