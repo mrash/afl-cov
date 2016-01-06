@@ -88,10 +88,10 @@ def run_in_background():
 
 def process_afl_test_cases(cargs):
 
-    rv        = 1
+    rv        = True
+    run_once  = False
     tot_files = 0
     fuzz_dir  = ''
-    run_once  = 0
 
     afl_files = []
     cov_paths = {}
@@ -109,7 +109,7 @@ def process_afl_test_cases(cargs):
     while True:
 
         if not import_fuzzing_dirs(cov_paths, cargs):
-            rv = 0
+            rv = False
             break
 
         dir_ctr = 0
@@ -158,7 +158,7 @@ def process_afl_test_cases(cargs):
                     else:
                         out_lines = run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
                                 cov_paths, cargs, WANT_OUTPUT)
-                        run_once = 1
+                        run_once = True
 
                     ### generate the code coverage stats for this test case
                     gen_coverage(fuzz_dir, cov_paths, cargs)
@@ -172,13 +172,15 @@ def process_afl_test_cases(cargs):
                     if not cargs.disable_lcov_web and cargs.lcov_web_all:
                         gen_web_cov_report(fuzz_dir, cov_paths, cargs)
 
+                    ### log the output of the very first coverage command to
+                    ### assist in troubleshooting
                     if len(out_lines):
-                        logr("\n\n*** First exec results for CMD: %s" % \
+                        logr("\n\n++++++ BEGIN - first exec output for CMD: %s" % \
                                 (cargs.coverage_cmd.replace('AFL_FILE', f)),
                                 cov_paths['log_file'], cargs)
                         for line in out_lines:
                             logr("    %s" % (line), cov_paths['log_file'], cargs)
-                        logr("\n", cov_paths['log_file'], cargs)
+                        logr("++++++ END\n", cov_paths['log_file'], cargs)
 
                 if dir_ctr == 1:
                     curr_file      = f
@@ -228,7 +230,7 @@ def process_afl_test_cases(cargs):
         if rv:
             logr("[*] Did not find any AFL test cases, exiting.\n",
                     cov_paths['log_file'], cargs)
-        rv = 0
+        rv = False
 
     return rv
 
@@ -401,7 +403,7 @@ def cov_init(cfile, cov):
 
 def extract_coverage(lcov_file, cargs):
 
-    search_rv = 0
+    search_rv = False
     tmp_cov = {}
 
     ### populate old lcov output for functions/lines that were called
@@ -442,7 +444,7 @@ def extract_coverage(lcov_file, cargs):
 
 def search_cov(cargs):
 
-    search_rv = 0
+    search_rv = False
 
     id_delta_file = cargs.afl_fuzzing_dir + '/cov/id-delta-cov'
     log_file      = cargs.afl_fuzzing_dir + '/cov/afl-cov.log'
@@ -459,12 +461,12 @@ def search_cov(cargs):
                         logr("[+] Function '%s' in file: '%s' executed by: '%s', cycle: %s" \
                                 % (val, current_file, id_file, cycle_num),
                                 log_file, cargs)
-                        search_rv = 1
+                        search_rv = True
                 else:
                     logr("[+] Function '%s' executed by: '%s', cycle: %s" \
                             % (val, id_file, cycle_num),
                             log_file, cargs)
-                    search_rv = 1
+                    search_rv = True
 
             if cargs.src_file == src_file \
                     and cargs.line_search and val == cargs.line_search:
@@ -472,7 +474,7 @@ def search_cov(cargs):
                     logr("[+] Line '%s' in file: '%s' executed by: '%s', cycle: %s" \
                             % (val, current_file, id_file, cycle_num),
                             log_file, cargs)
-                    search_rv = 1
+                    search_rv = True
 
     if not search_rv:
         if cargs.func_search:
@@ -489,7 +491,7 @@ def get_cycle_num(id_num, cargs):
     ### default cycle
     cycle_num = 0
 
-    if not os.path.exists(cargs.afl_fuzzing_dir + '/plot_data'):
+    if not is_dir(cargs.afl_fuzzing_dir + '/plot_data'):
         return cycle_num
 
     with open(cargs.afl_fuzzing_dir + '/plot_data') as f:
@@ -636,7 +638,7 @@ def gen_paths(fuzz_dir, cov_paths, afl_file, cargs):
     ct = cov_paths['dirs'][fuzz_dir]
 
     for k in ['diff_dir', 'web_dir', 'lcov_dir']:
-        if not os.path.exists(cov_paths[k] + '/' + basedir):
+        if not is_dir(cov_paths[k] + '/' + basedir):
                 os.mkdir(cov_paths[k] + '/' + basedir)
 
     ### coverage diffs from one ID file to the next
@@ -700,27 +702,27 @@ def import_fuzzing_dirs(cov_paths, cargs):
 
     if not cargs.afl_fuzzing_dir:
         print "[*] Must specify AFL fuzzing dir with --afl-fuzzing-dir or -d"
-        return 0
+        return False
 
     if 'top_dir' not in cov_paths:
         if not init_tracking(cov_paths, cargs):
-            return 0
+            return False
 
     def_dir = cargs.afl_fuzzing_dir
 
-    if os.path.exists(def_dir + '/queue'):
+    if is_dir(def_dir + '/queue'):
         if def_dir not in cov_paths['dirs']:
             add_dir(def_dir, cov_paths)
     else:
         for p in os.listdir(def_dir):
             fuzz_dir = def_dir + '/' + p
-            if os.path.isdir(fuzz_dir):
-                if os.path.exists(fuzz_dir + '/queue'):
+            if is_dir(fuzz_dir):
+                if is_dir(fuzz_dir + '/queue'):
                     ### found an AFL fuzzing directory instance
                     if fuzz_dir not in cov_paths['dirs']:
                         add_dir(fuzz_dir, cov_paths)
 
-    return 1
+    return True
 
 def import_test_cases(qdir):
     return sorted(glob.glob(qdir + "/id:*"))
@@ -744,11 +746,11 @@ def init_tracking(cov_paths, cargs):
     if cargs.overwrite:
         mkdirs(cov_paths, cargs)
     else:
-        if os.path.exists(cov_paths['top_dir']):
+        if is_dir(cov_paths['top_dir']):
             if not cargs.func_search and not cargs.line_search:
                 print "[*] Existing coverage dir %s found, use --overwrite to " \
                         "re-calculate coverage" % (cov_paths['top_dir'])
-                return 0
+                return False
         else:
             mkdirs(cov_paths, cargs)
 
@@ -767,54 +769,84 @@ def init_tracking(cov_paths, cargs):
                 + " --no-checksum --zerocounters --directory " \
                 + cargs.code_dir, cov_paths, cargs, NO_OUTPUT)
 
-    return 1
+    return True
+
+### credit:
+### http://stackoverflow.com/questions/377017/test-if-executable-exists-in-python
+def is_exe(fpath):
+    return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+def which(prog):
+    fpath, fname = os.path.split(prog)
+    if fpath:
+        if is_exe(prog):
+            return prog
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, prog)
+            if is_exe(exe_file):
+                return exe_file
+    return None
 
 def validate_args(cargs):
 
     if cargs.coverage_cmd:
         if 'AFL_FILE' not in cargs.coverage_cmd:
             print "[*] --coverage-cmd must contain AFL_FILE"
-            return 0
+            return False
+        ### make sure at least one component of the command is an
+        ### executable
+        found_exec = False
+        for part in cargs.coverage_cmd.split(' '):
+            if part[0] == ' ' or part[0] == '-':
+                continue
+            if (which(part)):
+                return True
+        if not found_exec:
+            print "[*] Could not find an executable binary in " \
+                    "--coverage-cmd '%s'" % cargs.coverage_cmd
+            return False
     else:
         if not cargs.func_search and not cargs.line_search:
             print "[*] Must set --coverage-cmd or --func-search/--line-search"
-            return 0
+            return False
 
     if cargs.code_dir:
-        if not os.path.exists(cargs.code_dir):
+        if not is_dir(cargs.code_dir):
             print "[*] --code-dir path does not exist"
-            return 0
+            return False
     else:
         if not cargs.func_search and not cargs.line_search:
             print "[*] Must set --code-dir unless using --func-search " \
                     "against existing afl-cov directory"
-            return 0
+            return False
 
     if cargs.func_search or cargs.line_search:
         if cargs.func_search and '()' not in cargs.func_search:
             cargs.func_search += '()'
         if cargs.line_search and not cargs.src_file:
             print "[*] Must set --src-file in --line-search mode"
-            return 0
+            return False
 
-    if not cargs.live and not fuzzing_dir_exists(cargs):
+    if not cargs.live and not is_dir(cargs.afl_fuzzing_dir):
         print "[*] It doesn't look like directory '%s' exists" \
             % (cargs.afl_fuzzing_dir)
-        return 0
+        return False
 
-    if not os.path.exists(cargs.lcov_path):
+    if not which(cargs.lcov_path):
         print "[*] lcov command does not exist: %s" % (cargs.lcov_path)
-        return 0
+        return False
 
     if not cargs.disable_lcov_web and cargs.lcov_web_all:
-        if not os.path.exists(cargs.genhtml_path):
+        if not which(cargs.genhtml_path):
             print "[*] genhtml command does not exist: %s" % (cargs.genthml_path)
-            return 0
+            return False
 
-    return 1
+    return True
 
 def is_afl_running(cargs):
-    while not fuzzing_dir_exists(cargs):
+    while not is_dir(cargs.afl_fuzzing_dir):
         if not cargs.background:
             print "[-] Sleep for %d seconds for AFL fuzzing directory to be created..." \
                     % cargs.sleep
@@ -837,7 +869,7 @@ def add_dir(fdir, cov_paths):
 def mkdirs(cov_paths, cargs):
 
     create_cov_dirs = 0
-    if os.path.exists(cov_paths['top_dir']):
+    if is_dir(cov_paths['top_dir']):
         if cargs.overwrite:
             rmtree(cov_paths['top_dir'])
             create_cov_dirs = 1
@@ -855,10 +887,8 @@ def mkdirs(cov_paths, cargs):
 
     return
 
-def fuzzing_dir_exists(cargs):
-    if not os.path.exists(cargs.afl_fuzzing_dir):
-        return 0
-    return 1
+def is_dir(dpath):
+    return os.path.exists(dpath) and os.path.isdir(dpath)
 
 def logr(pstr, log_file, cargs):
     if not cargs.background and not cargs.quiet:
