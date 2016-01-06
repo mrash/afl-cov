@@ -260,23 +260,29 @@ displayed below, and all are contained within the main
 top level directory name for the fuzzing instance. When AFL is parallelized,
 there will be one `<dirname>` directory path for each `afl-fuzz` instance.
 
- * `cov/diff/<dirname>` - contains new code coverage results when a `queue/id:NNNNNN*` file
-                 causes `afl-fuzz` to execute new code.
- * `cov/lcov/<dirname>` - contains raw code coverage data produced by the lcov front-end to gcov.
- * `cov/web/<dirname>`  - contains code coverage results in web format produced by `genhtml`.
- * `cov/zero-cov` - file that globally lists all functions (and optionally lines) that
-                    are never executed by any `afl-fuzz` test case.
- * `cov/pos-cov` - file that globally lists all functions (and optionally lines) that are
-                   executed at least once by an `afl-fuzz` test case.
- * `cov/id-delta-cov` - lists the functions (and optionally lines) that are executed by
-                        the first `id:000000*` test case, and then lists all new
-                        functions/lines executed in subsequent test cases.
+ * `cov/diff/<dirname>` - contains new code coverage results when a
+                `queue/id:NNNNNN*` file causes `afl-fuzz` to execute new code.
+ * `cov/lcov/<dirname>` - contains raw code coverage data produced by the lcov
+                front-end to gcov.
+ * `cov/web/<dirname>`  - contains code coverage results in web format produced
+                by `genhtml`.
+ * `cov/zero-cov` - file that globally lists all functions (and optionally
+                lines) that are never executed by any `afl-fuzz` test case.
+ * `cov/pos-cov` - file that globally lists all functions (and optionally
+                lines) that are executed at least once by an `afl-fuzz` test
+                case.
+ * `cov/id-delta-cov` - lists the functions (and optionally lines) that are
+                executed by the first `id:000000*` test case, and then lists
+                all new functions/lines executed in subsequent test cases.
+ * `cov/afl-cov.log` - log file for `afl-cov` logging output.
+ * `cov/afl-cov-status` - status file for `afl-cov` PID, version number , and
+                command line arguments.
 
 ## Usage Information
 Basic `--help` output appears below:
 
-    usage: afl-cov [-h] [-e COVERAGE_CMD] [-d AFL_FUZZING_DIR] [-c CODE_DIR] [-O]
-               [--disable-cmd-redirection] [--disable-lcov-web]
+    usage: afl-cov [-h] [-e COVERAGE_CMD] [-d AFL_FUZZING_DIR] [-c CODE_DIR]
+               [-O] [--disable-cmd-redirection] [--disable-lcov-web]
                [--disable-coverage-init] [--coverage-include-lines]
                [--enable-branch-coverage] [--live] [--sleep SLEEP]
                [--background] [--lcov-web-all] [--preserve-all-lcov-files]
@@ -288,8 +294,8 @@ Basic `--help` output appears below:
     optional arguments:
       -h, --help            show this help message and exit
       -e COVERAGE_CMD, --coverage-cmd COVERAGE_CMD
-                            set command to exec (including args, and assumes code
-                            coverage support)
+                            set command to exec (including args, and assumes
+                            code coverage support)
       -d AFL_FUZZING_DIR, --afl-fuzzing-dir AFL_FUZZING_DIR
                             top level AFL fuzzing directory
       -c CODE_DIR, --code-dir CODE_DIR
@@ -306,12 +312,12 @@ Basic `--help` output appears below:
       --coverage-include-lines
                             include lines in zero-coverage status files
       --enable-branch-coverage
-                            include branch coverage in code coverage reports (may
-                            be slow)
+                            include branch coverage in code coverage reports
+                            (may be slow)
       --live                process a live AFL directory, and afl-cov will exit
                             when it appears afl-fuzz has been stopped
-      --sleep SLEEP         In --live mode, # of seconds to sleep between checking
-                            for new queue files
+      --sleep SLEEP         In --live mode, # of seconds to sleep between
+                            checking for new queue files
       --background          background mode - if also in --live mode, will exit
                             when the alf-fuzz process is finished
       --lcov-web-all        generate lcov web reports for all id:NNNNNN* files
@@ -323,11 +329,11 @@ Basic `--help` output appears below:
       --line-search LINE_SEARCH
                             search for coverage of a specific line number
                             (requires --src-file)
-      --src-file SRC_FILE   restrict function or line search to a specific source
-                            file
+      --src-file SRC_FILE   restrict function or line search to a specific
+                            source file
       --afl-queue-id-limit AFL_QUEUE_ID_LIMIT
-                            limit the number of id:NNNNNN* files processed in the
-                            AFL queue/ directory
+                            limit the number of id:NNNNNN* files processed in
+                            the AFL queue/ directory
       --lcov-path LCOV_PATH
                             path to lcov command
       --genhtml-path GENHTML_PATH
