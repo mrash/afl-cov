@@ -240,10 +240,10 @@ def coverage_diff(cycle_num, fuzz_dir, cov_paths, afl_file, cov, cargs):
     delta_log_lines   = []
     print_diff_header = 1
 
-    ct = cov_paths['dirs'][fuzz_dir]
+    cp = cov_paths['dirs'][fuzz_dir]
 
-    a_file = os.path.basename(ct['prev_file'])
-    a_dir  = os.path.basename(os.path.dirname(ct['prev_lcov_info_final']))
+    a_file = os.path.basename(cp['prev_file'])
+    a_dir  = os.path.basename(os.path.dirname(cp['prev_lcov_info_final']))
 
     b_file = os.path.basename(afl_file)
     b_dir  = os.path.basename(fuzz_dir)
@@ -252,9 +252,9 @@ def coverage_diff(cycle_num, fuzz_dir, cov_paths, afl_file, cov, cargs):
     ### the previous time we went through this function, we remove
     ### associated files unless instructed to keep them
     if not cargs.preserve_all_lcov_files:
-        rm_prev_cov_files(ct)
+        rm_prev_cov_files(cp)
 
-    new_cov = extract_coverage(ct['lcov_info_final'], cargs)
+    new_cov = extract_coverage(cp['lcov_info_final'], cargs)
 
     ### We aren't interested in the number of times AFL has executed
     ### a line or function (since we can't really get this anyway because
@@ -279,10 +279,10 @@ def coverage_diff(cycle_num, fuzz_dir, cov_paths, afl_file, cov, cargs):
                     if ctype == 'line':
                         if cargs.coverage_include_lines:
                             delta_log_lines.append("%s, %s, %s, %s, %s\n" \
-                                    % (ct['id_file'], cycle_num, f, ctype, val))
+                                    % (cp['id_file'], cycle_num, f, ctype, val))
                     else:
                         delta_log_lines.append("%s, %s, %s, %s, %s\n" \
-                                % (ct['id_file'], cycle_num, f, ctype, val))
+                                % (cp['id_file'], cycle_num, f, ctype, val))
         elif f in cov['zero'] and f in cov['pos']:
             for ctype in new_cov['pos'][f]:
                 for val in sorted(new_cov['pos'][f][ctype]):
@@ -299,11 +299,11 @@ def coverage_diff(cycle_num, fuzz_dir, cov_paths, afl_file, cov, cargs):
                         if ctype == 'line':
                             if cargs.coverage_include_lines:
                                 delta_log_lines.append("%s, %s, %s, %s, %s\n" \
-                                        % (ct['id_file'], cycle_num, f, \
+                                        % (cp['id_file'], cycle_num, f, \
                                         ctype, val))
                         else:
                             delta_log_lines.append("%s, %s, %s, %s, %s\n" \
-                                    % (ct['id_file'], cycle_num, f, \
+                                    % (cp['id_file'], cycle_num, f, \
                                     ctype, val))
 
     ### now that new positive coverage has been added, reset zero
@@ -317,7 +317,7 @@ def coverage_diff(cycle_num, fuzz_dir, cov_paths, afl_file, cov, cargs):
             cov_paths['log_file'], cargs)
         for l in log_lines:
             logr(l, cov_paths['log_file'], cargs)
-            append_file(l, ct['diff'])
+            append_file(l, cp['diff'])
         logr("", cov_paths['log_file'], cargs)
 
     if len(delta_log_lines):
@@ -569,11 +569,11 @@ def gen_coverage(fuzz_dir, cov_paths, cargs):
 
 def gen_web_cov_report(fuzz_dir, cov_paths, cargs):
 
-    ct = cov_paths['dirs'][fuzz_dir]
+    cp = cov_paths['dirs'][fuzz_dir]
 
     web_dir = cov_paths['web_dir']
 
-    os.mkdir(ct['lcov_web_dir'])
+    os.mkdir(cp['lcov_web_dir'])
     genhtml_opts = ''
 
     if cargs.enable_branch_coverage:
@@ -582,19 +582,19 @@ def gen_web_cov_report(fuzz_dir, cov_paths, cargs):
     run_cmd(cargs.genhtml_path \
             + genhtml_opts
             + " --output-directory " \
-            + ct['lcov_web_dir'] + " " \
-            + ct['lcov_info_final'], \
+            + cp['lcov_web_dir'] + " " \
+            + cp['lcov_info_final'], \
             cov_paths, cargs, NO_OUTPUT)
 
     logr("[+] Final lcov web report: %s" \
             % web_dir + '/lcov-web-final.html',
             cov_paths['log_file'], cargs)
 
-    if ct['lcov_web_dir'][0] == '/':
-        os.symlink(ct['lcov_web_dir'] + '/index.html',
+    if cp['lcov_web_dir'][0] == '/':
+        os.symlink(cp['lcov_web_dir'] + '/index.html',
                 web_dir + '/lcov-web-final.html')
     else:
-        os.symlink(os.getcwd() + '/' + ct['lcov_web_dir'] \
+        os.symlink(os.getcwd() + '/' + cp['lcov_web_dir'] \
                 + '/index.html', web_dir + '/lcov-web-final.html')
 
     return
@@ -643,44 +643,44 @@ def gen_paths(fuzz_dir, cov_paths, afl_file, cargs):
     basename = os.path.basename(afl_file)
     basedir  = os.path.basename(fuzz_dir)
 
-    ct = cov_paths['dirs'][fuzz_dir]
+    cp = cov_paths['dirs'][fuzz_dir]
 
     for k in ['diff_dir', 'web_dir', 'lcov_dir']:
         if not is_dir(cov_paths[k] + '/' + basedir):
                 os.mkdir(cov_paths[k] + '/' + basedir)
 
     ### coverage diffs from one ID file to the next
-    ct['diff'] = cov_paths['diff_dir'] + '/' + basedir + '/' + basename
+    cp['diff'] = cov_paths['diff_dir'] + '/' + basedir + '/' + basename
 
     ### current id:NNNNNN* test case file
-    ct['id_file'] = basedir + '/' + basename
+    cp['id_file'] = basedir + '/' + basename
 
     ### web files
-    ct['lcov_web_dir'] = cov_paths['web_dir'] + \
+    cp['lcov_web_dir'] = cov_paths['web_dir'] + \
             '/' + basedir + '/' + basename
 
     ### raw lcov files
-    ct['lcov_base'] = cov_paths['lcov_dir'] + \
+    cp['lcov_base'] = cov_paths['lcov_dir'] + \
             '/' + basedir + '/' + basename + '.lcov_base'
 
-    ct['lcov_info'] = cov_paths['lcov_dir'] + \
+    cp['lcov_info'] = cov_paths['lcov_dir'] + \
             '/' + basedir + '/' + basename + '.lcov_info'
 
-    ct['lcov_info_tmp'] = cov_paths['lcov_dir'] + '/' \
+    cp['lcov_info_tmp'] = cov_paths['lcov_dir'] + '/' \
             + basedir + '/' + basename + '.lcov_info_tmp'
 
-    ct['lcov_info_final'] = cov_paths['lcov_dir'] + '/' \
+    cp['lcov_info_final'] = cov_paths['lcov_dir'] + '/' \
             + basedir + '/' + basename + '.lcov_info_final'
 
-    if ct['prev_file']:
-        ct['prev_lcov_base'] = cov_paths['lcov_dir'] + '/' \
-                + basedir + '/' + os.path.basename(ct['prev_file']) \
+    if cp['prev_file']:
+        cp['prev_lcov_base'] = cov_paths['lcov_dir'] + '/' \
+                + basedir + '/' + os.path.basename(cp['prev_file']) \
                 + '.lcov_base'
-        ct['prev_lcov_info'] = cov_paths['lcov_dir'] + '/' \
-                + basedir + '/' + os.path.basename(ct['prev_file']) \
+        cp['prev_lcov_info'] = cov_paths['lcov_dir'] + '/' \
+                + basedir + '/' + os.path.basename(cp['prev_file']) \
                 + '.lcov_info'
-        ct['prev_lcov_info_final'] = cov_paths['lcov_dir'] + \
-                '/' + basedir + '/' + os.path.basename(ct['prev_file']) \
+        cp['prev_lcov_info_final'] = cov_paths['lcov_dir'] + \
+                '/' + basedir + '/' + os.path.basename(cp['prev_file']) \
                 + '.lcov_info_final'
     return
 
