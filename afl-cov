@@ -508,7 +508,8 @@ def get_cycle_num(id_num, cargs):
 
 def gen_coverage(fuzz_dir, cov_paths, cargs):
 
-    ct = cov_paths['dirs'][fuzz_dir]
+    cp = cov_paths['dirs'][fuzz_dir]
+    out_lines = []
 
     lcov_opts = ''
     if cargs.enable_branch_coverage:
@@ -519,29 +520,36 @@ def gen_coverage(fuzz_dir, cov_paths, cargs):
             + " --no-checksum --capture --initial" \
             + " --directory " + cargs.code_dir \
             + " --output-file " \
-            + ct['lcov_base'], \
+            + cp['lcov_base'], \
             cov_paths, cargs, NO_OUTPUT)
 
     run_cmd(cargs.lcov_path \
             + lcov_opts
             + " --no-checksum --capture --directory " \
             + cargs.code_dir + " --output-file " \
-            + ct['lcov_info'], \
+            + cp['lcov_info'], \
             cov_paths, cargs, NO_OUTPUT)
 
-    run_cmd(cargs.lcov_path \
-            + lcov_opts
-            + " --no-checksum -a " + ct['lcov_base'] \
-            + " -a " + ct['lcov_info'] \
-            + " --output-file " + ct['lcov_info_final'], \
-            cov_paths, cargs, NO_OUTPUT)
-
-    out_lines = run_cmd(cargs.lcov_path \
-            + lcov_opts
-            + " --no-checksum -r " + ct['lcov_info'] \
-            + " /usr/include/*  --output-file " \
-            + ct['lcov_info_final'],
-            cov_paths, cargs, WANT_OUTPUT)
+    if (cargs.disable_lcov_exclude_pattern):
+        out_lines = run_cmd(cargs.lcov_path \
+                + lcov_opts
+                + " --no-checksum -a " + cp['lcov_base'] \
+                + " -a " + cp['lcov_info'] \
+                + " --output-file " + cp['lcov_info_final'], \
+                cov_paths, cargs, WANT_OUTPUT)
+    else:
+        run_cmd(cargs.lcov_path \
+                + lcov_opts
+                + " --no-checksum -a " + cp['lcov_base'] \
+                + " -a " + cp['lcov_info'] \
+                + " --output-file " + cp['lcov_info_tmp'], \
+                cov_paths, cargs, NO_OUTPUT)
+        out_lines = run_cmd(cargs.lcov_path \
+                + lcov_opts
+                + " --no-checksum -r " + cp['lcov_info_tmp'] \
+                + " " + cargs.lcov_exclude_pattern + "  --output-file " \
+                + cp['lcov_info_final'],
+                cov_paths, cargs, WANT_OUTPUT)
 
     for line in out_lines:
         m = re.search('^\s+(lines\.\..*\:\s.*)', line)
@@ -657,6 +665,9 @@ def gen_paths(fuzz_dir, cov_paths, afl_file, cargs):
 
     ct['lcov_info'] = cov_paths['lcov_dir'] + \
             '/' + basedir + '/' + basename + '.lcov_info'
+
+    ct['lcov_info_tmp'] = cov_paths['lcov_dir'] + '/' \
+            + basedir + '/' + basename + '.lcov_info_tmp'
 
     ct['lcov_info_final'] = cov_paths['lcov_dir'] + '/' \
             + basedir + '/' + basename + '.lcov_info_final'
@@ -901,62 +912,68 @@ def parse_cmdline():
     p = argparse.ArgumentParser()
 
     p.add_argument("-e", "--coverage-cmd", type=str,
-            help="set command to exec (including args, and assumes code coverage support)")
+            help="Set command to exec (including args, and assumes code coverage support)")
     p.add_argument("-d", "--afl-fuzzing-dir", type=str,
             help="top level AFL fuzzing directory")
     p.add_argument("-c", "--code-dir", type=str,
-            help="directory where the code lives (compiled with code coverage support)")
+            help="Directory where the code lives (compiled with code coverage support)")
     p.add_argument("-O", "--overwrite", action='store_true',
-            help="overwrite existing coverage results", default=False)
+            help="Overwrite existing coverage results", default=False)
     p.add_argument("--disable-cmd-redirection", action='store_true',
-            help="disable redirection of command results to /dev/null",
+            help="Disable redirection of command results to /dev/null",
             default=False)
     p.add_argument("--disable-lcov-web", action='store_true',
-            help="disable generation of all lcov web code coverage reports",
+            help="Disable generation of all lcov web code coverage reports",
             default=False)
     p.add_argument("--disable-coverage-init", action='store_true',
-            help="disable initialization of code coverage counters at afl-cov startup",
+            help="Disable initialization of code coverage counters at afl-cov startup",
             default=False)
     p.add_argument("--coverage-include-lines", action='store_true',
-            help="include lines in zero-coverage status files",
+            help="Include lines in zero-coverage status files",
             default=False)
     p.add_argument("--enable-branch-coverage", action='store_true',
-            help="include branch coverage in code coverage reports (may be slow)",
+            help="Include branch coverage in code coverage reports (may be slow)",
             default=False)
     p.add_argument("--live", action='store_true',
-            help="process a live AFL directory, and afl-cov will exit when it appears afl-fuzz has been stopped",
+            help="Process a live AFL directory, and afl-cov will exit when it appears afl-fuzz has been stopped",
             default=False)
     p.add_argument("--sleep", type=int,
             help="In --live mode, # of seconds to sleep between checking for new queue files",
             default=60)
     p.add_argument("--background", action='store_true',
-            help="background mode - if also in --live mode, will exit when the alf-fuzz process is finished",
+            help="Background mode - if also in --live mode, will exit when the alf-fuzz process is finished",
             default=False)
     p.add_argument("--lcov-web-all", action='store_true',
-            help="generate lcov web reports for all id:NNNNNN* files instead of just the last one",
+            help="Generate lcov web reports for all id:NNNNNN* files instead of just the last one",
             default=False)
     p.add_argument("--preserve-all-lcov-files", action='store_true',
             help="Keep all lcov files (not usually necessary)",
             default=False)
+    p.add_argument("--disable-lcov-exclude-pattern", action='store_true',
+            help="Allow default /usr/include/* pattern to be included in lcov results",
+            default=False)
+    p.add_argument("--lcov-exclude-pattern", type=str,
+            help="Set exclude pattern for lcov results",
+            default="/usr/include/\*")
     p.add_argument("--func-search", type=str,
-            help="search for coverage of a specific function")
+            help="Search for coverage of a specific function")
     p.add_argument("--line-search", type=str,
-            help="search for coverage of a specific line number (requires --src-file)")
+            help="Search for coverage of a specific line number (requires --src-file)")
     p.add_argument("--src-file", type=str,
-            help="restrict function or line search to a specific source file")
+            help="Restrict function or line search to a specific source file")
     p.add_argument("--afl-queue-id-limit", type=int,
-            help="limit the number of id:NNNNNN* files processed in the AFL queue/ directory",
+            help="Limit the number of id:NNNNNN* files processed in the AFL queue/ directory",
             default=0)
     p.add_argument("--lcov-path", type=str,
-            help="path to lcov command", default="/usr/bin/lcov")
+            help="Path to lcov command", default="/usr/bin/lcov")
     p.add_argument("--genhtml-path", type=str,
-            help="path to genhtml command", default="/usr/bin/genhtml")
+            help="Path to genhtml command", default="/usr/bin/genhtml")
     p.add_argument("-v", "--verbose", action='store_true',
-            help="verbose mode", default=False)
+            help="Verbose mode", default=False)
     p.add_argument("-V", "--version", action='store_true',
-            help="print version and exit", default=False)
+            help="Print version and exit", default=False)
     p.add_argument("-q", "--quiet", action='store_true',
-            help="quiet mode", default=False)
+            help="Quiet mode", default=False)
 
     return p.parse_args()
 
