@@ -1,0 +1,97 @@
+# All functions / lines in this file were executed by at
+# least one AFL test case. See the cov/id-delta-cov file
+# for more information.
+File: /home/mbr/git/fwknop.git/common/strlcat.c
+    function: strlcat()
+File: /home/mbr/git/fwknop.git/server/log_msg.c
+    function: free_logging()
+    function: init_logging()
+    function: log_msg()
+    function: log_set_verbosity()
+File: /home/mbr/git/fwknop.git/common/strlcpy.c
+    function: strlcpy()
+File: /home/mbr/git/fwknop.git/lib/fko_encryption.c
+File: /home/mbr/git/fwknop.git/server/cmd_cycle.c
+    function: free_cmd_cycle_list()
+File: /home/mbr/git/fwknop.git/lib/fko_server_auth.c
+File: /home/mbr/git/fwknop.git/lib/fko_message.c
+File: /home/mbr/git/fwknop.git/lib/sha2.c
+File: /home/mbr/git/fwknop.git/server/replay_cache.c
+    function: free_replay_list()
+File: /home/mbr/git/fwknop.git/server/access.c
+    function: acc_data_is_valid()
+    function: acc_stanza_add()
+    function: acc_stanza_init()
+    function: add_acc_b64_string()
+    function: add_acc_bool()
+    function: add_acc_expire_time.isra.0()
+    function: add_acc_force_nat()
+    function: add_acc_force_snat()
+    function: add_acc_string()
+    function: enable_acc_stanzas_init()
+    function: free_acc_int_list()
+    function: free_acc_port_list()
+    function: free_acc_stanza_data()
+    function: free_acc_stanzas()
+    function: parse_access_file()
+    function: zero_buf_wrapper()
+File: /home/mbr/git/fwknop.git/server/tcp_server.c
+File: /home/mbr/git/fwknop.git/lib/fko_encode.c
+File: /home/mbr/git/fwknop.git/lib/fko_rand_value.c
+File: /home/mbr/git/fwknop.git/server/utils.c
+    function: clean_exit()
+    function: is_valid_dir()
+    function: is_valid_file()
+    function: is_valid_path()
+    function: verify_file_perms_ownership()
+File: /home/mbr/git/fwknop.git/server/incoming_spa.c
+File: /home/mbr/git/fwknop.git/lib/fko_nat_access.c
+File: /home/mbr/git/fwknop.git/lib/sha3.c
+File: /home/mbr/git/fwknop.git/server/fwknopd_errors.c
+File: /home/mbr/git/fwknop.git/lib/gpgme_funcs.c
+File: /home/mbr/git/fwknop.git/server/config_init.c
+    function: config_init()
+    function: free_configs()
+    function: parse_config_file()
+    function: range_check()
+    function: set_config_entry()
+    function: set_preconfig_entries()
+    function: validate_int_var_ranges()
+    function: validate_options()
+File: /home/mbr/git/fwknop.git/lib/sha1.c
+File: /home/mbr/git/fwknop.git/lib/fko_error.c
+File: /home/mbr/git/fwknop.git/lib/md5.c
+File: /home/mbr/git/fwknop.git/lib/fko_user.c
+File: /home/mbr/git/fwknop.git/lib/rijndael.c
+File: /home/mbr/git/fwknop.git/server/fwknopd.c
+    function: check_dir_path()
+    function: main()
+    function: set_locale.isra.0()
+File: /home/mbr/git/fwknop.git/server/udp_server.c
+File: /home/mbr/git/fwknop.git/lib/fko_decode.c
+File: /home/mbr/git/fwknop.git/lib/hmac.c
+File: /home/mbr/git/fwknop.git/server/pcap_capture.c
+File: /home/mbr/git/fwknop.git/lib/fko_timestamp.c
+File: /home/mbr/git/fwknop.git/server/extcmd.c
+File: /home/mbr/git/fwknop.git/server/sig_handler.c
+File: /home/mbr/git/fwknop.git/lib/fko_hmac.c
+File: /home/mbr/git/fwknop.git/lib/fko_funcs.c
+    function: fko_base64_decode()
+File: /home/mbr/git/fwknop.git/common/fko_util.c
+    function: enc_mode_strtoint()
+    function: hmac_digest_strtoint()
+    function: is_base64()
+    function: is_valid_ipv4_addr()
+    function: strtol_wrapper()
+    function: zero_buf()
+File: /home/mbr/git/fwknop.git/lib/fko_client_timeout.c
+File: /home/mbr/git/fwknop.git/lib/digest.c
+File: /home/mbr/git/fwknop.git/lib/fko_digest.c
+File: /home/mbr/git/fwknop.git/server/process_packet.c
+File: /home/mbr/git/fwknop.git/server/fw_util_iptables.c
+    function: fw_config_init()
+    function: set_fw_chain_conf()
+    function: validate_ipt_chain_conf()
+File: /home/mbr/git/fwknop.git/lib/base64.c
+    function: b64_decode()
+File: /home/mbr/git/fwknop.git/lib/cipher_funcs.c

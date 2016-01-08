@@ -1,0 +1,13 @@
+### 
+SOURCE 0,   2
+
+SOUaCE   NY
+KEY  12
+HMAC_DIGEST_TYPE    sha256
+OP   56
+
+FW_ACCESS_TIMEOUT   2
+
+SOUaCE   NY
+KEY     test3
+XPIRE  

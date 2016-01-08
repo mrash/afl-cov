@@ -1,0 +1,17 @@
+### 
+SOURCE 0, 0,10
+KEY test1;H
+DI9 s
+FACCESS_TIMEOUT   2
+
+SOURCE   Nha10
+KEY test1;H
+DIG sha512
+HMAC_ÄIGEÿÿ_TYPE    sha256
+OP   56
+
+FACCESS_TIMEOUT   2
+
+SOURCE   NY
+KEY     tgst3
+XPIRE  

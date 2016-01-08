@@ -1,0 +1,9 @@
+### 
+SOURCE 0./
+KEY ]est1
+HMAC_KEY    test2
+DIG PE    sha256
+OPEk_PORTS   /80
+FW_A€ÿÿ S_TIMEOUT   2
+
+S_EXPIRE  

@@ -1,0 +1,9 @@
+diff id:000004,src:000000,op:flip1,pos:11 -> id:000005,src:000000,op:flip1,pos:16,+cov
+Src file: /home/mbr/git/fwknop.git/server/access.c
+  New 'line' coverage: 1203
+  New 'line' coverage: 1204
+  New 'line' coverage: 1207
+  New 'line' coverage: 1210
+  New 'line' coverage: 1572
+  New 'line' coverage: 1574
+  New 'line' coverage: 1575

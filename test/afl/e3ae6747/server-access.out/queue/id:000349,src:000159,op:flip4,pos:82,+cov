@@ -1,0 +1,6 @@
+### 
+SOURCE 0.10
+KEY test1
+HMAC_KEY    test2
+DIG sha512
+HMAC_DIGEST_TYPE    sha256ÆORCE_SNAT   T   

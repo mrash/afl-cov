@@ -1,0 +1,20 @@
+### 
+SOURCE 0.10
+KEY test1
+HMAC_KEY    test2
+DIG sha512
+@YPE    56
+OPEN_PORTS   /80
+FW_ACCESS_TIMEOUT   2
+
+S&   NY
+KEY     te‡t3
+ACC 03/t
+OPEN_PORTS  tc;
+RE    5
+FWODE cy
+
+SOUR23 22
+FORCE_SNAT  33.3.3.3
+
+SOURCE .

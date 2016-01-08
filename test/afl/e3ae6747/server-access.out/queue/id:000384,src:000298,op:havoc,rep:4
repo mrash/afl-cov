@@ -1,0 +1,13 @@
+### 
+SOURCE 0,10
+KEY test1;H
+DIG sha512 
+SOURCE 0,10
+KEY t  sha256
+OP   56
+
+$W_ACCESS_TIMEOuT € 2
+
+SOURCE   NY
+KEY     test3
+XPIRE  

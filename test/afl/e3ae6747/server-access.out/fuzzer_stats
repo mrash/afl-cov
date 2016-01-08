@@ -1,0 +1,25 @@
+start_time     : 1451257991
+last_update    : 1451260835
+fuzzer_pid     : 15326
+cycles_done    : 0
+execs_done     : 6201030
+execs_per_sec  : 2479.44
+paths_total    : 392
+paths_favored  : 87
+paths_found    : 391
+paths_imported : 0
+max_depth      : 4
+cur_path       : 310
+pending_favs   : 36
+pending_total  : 327
+variable_paths : 0
+bitmap_cvg     : 1.95%
+unique_crashes : 0
+unique_hangs   : 0
+last_path      : 1451260822
+last_crash     : 0
+last_hang      : 0
+exec_timeout   : 1000
+afl_banner     : fwknopd,access.conf,e3ae674
+afl_version    : 1.96b
+command_line   : afl-fuzz -m 800 -T fwknopd,access.conf,e3ae674 -t 1000 -i test-cases/server-access -o fuzzing-output/server-access.out -f fuzzing-output/server-access.out/afl_access.conf ../../server/.libs/fwknopd -c ../conf/ipt_snat_fwknopd.conf -a fuzzing-output/server-access.out/afl_access.conf -O ../conf/override_no_digest_tracking_fwknopd.conf -A -f -t --exit-parse-config -v -v -v -r /tmp/afl-ramdisk/fwknop.git/test/afl/run

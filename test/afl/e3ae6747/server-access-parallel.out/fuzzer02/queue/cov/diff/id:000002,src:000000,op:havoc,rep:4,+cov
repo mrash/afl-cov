@@ -1,0 +1,6 @@
+diff id:000001,src:000000,op:havoc,rep:64,+cov -> id:000002,src:000000,op:havoc,rep:4,+cov
+Src file: /home/mbr/git/fwknop.git/server/access.c
+  New 'line' coverage: 278
+  New 'line' coverage: 280
+  New 'line' coverage: 281
+  New 'line' coverage: 282
