@@ -1,17 +1,16 @@
 # afl-cov - AFL Fuzzing Code Coverage
 
 ## Introduction
-`afl-cov` uses test case files produced by the AFL fuzzer (see:
-[http://lcamtuf.coredump.cx/afl/](http://lcamtuf.coredump.cx/afl/) to generate
-gcov code coverage results for a targeted binary. Code coverage is
-interpreted from one case to the next by `afl-cov` in order to determine which
-new functions and lines are hit by AFL with each new test case. Further,
-`afl-cov` allows for specific lines or functions to be searched for within
-coverage results, and when a match is found the corresponding test case file is
-displayed. This allows the user to discover which AFL test case is the first to
-exercise a particular function. In addition, `afl-cov` produces a "zero
-coverage" report of functions and lines that were never executed during any AFL
-fuzzing run.
+`afl-cov` uses test case files produced by the
+[AFL fuzzer](http://lcamtuf.coredump.cx/afl/) `afl-fuzz` to generate gcov code
+coverage results for a targeted binary. Code coverage is interpreted from one
+case to the next by `afl-cov` in order to determine which new functions and
+lines are hit by AFL with each new test case. Further, `afl-cov` allows for
+specific lines or functions to be searched for within coverage results, and
+when a match is found the corresponding test case file is displayed. This
+allows the user to discover which AFL test case is the first to exercise a
+particular function. In addition, `afl-cov` produces a "zero coverage" report
+of functions and lines that were never executed during any AFL fuzzing run.
 
 Although of no use to AFL itself, the main application of `afl-cov` is to wrap
 some automation around gcov and thereby provide data on how to maximize code
