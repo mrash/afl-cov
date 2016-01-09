@@ -52,7 +52,7 @@ def main():
     if not is_dir(fwknop_codecov_dir):
         print "[+] (Code cov) cloning fwknop repo: %s" % (cargs.fwknop_git)
         do_cmd("%s clone %s %s" % (cmds['git'],
-            cargs.fwknop_git, fwknop_codecov_dir), None)
+            cargs.fwknop_git, fwknop_codecov_dir), None, cargs)
 
     if not is_dir(fwknop_codecov_dir):
         print "[*] Could not clone %s, set a different --fwknop-git path?"
@@ -61,13 +61,13 @@ def main():
     if not is_dir(fwknop_afl_dir):
         print "[+] (AFL support) Cloning fwknop repo: %s" % (cargs.fwknop_git)
         do_cmd("%s clone %s %s" % (cmds['git'],
-            fwknop_codecov_dir, fwknop_afl_dir), None)
+            fwknop_codecov_dir, fwknop_afl_dir), None, cargs)
 
     ### build both fwknop repositories under the specified commit
-    build_fwknop(fwknop_codecov_dir,
-            fwknop_commit, fwknop_codecov_compile, cmds)
-    build_fwknop(fwknop_afl_dir,
-            fwknop_commit, fwknop_afl_compile, cmds)
+    build_fwknop(fwknop_codecov_dir, fwknop_commit,
+            fwknop_codecov_compile, cmds, cargs)
+    build_fwknop(fwknop_afl_dir, fwknop_commit,
+            fwknop_afl_compile, cmds, cargs)
 
     ### run the actual tests
     print "[+] Running afl-cov tests..."
@@ -76,25 +76,28 @@ def main():
 
     return
 
-def build_fwknop(cdir, commit, compile_cmd, cmds):
+def build_fwknop(cdir, commit, compile_cmd, cmds, cargs):
 
     curr_dir = os.getcwd()
     os.chdir(cdir)
     if os.path.exists('./server/.libs/fwknopd'):
-        do_cmd("%s clean" % (cmds['make']), None)
-    do_cmd("%s checkout %s" % (cmds['git'], commit), None)
-    do_cmd("./autogen.sh", None)
+        do_cmd("%s clean" % (cmds['make']), None, cargs)
+    do_cmd("%s checkout %s" % (cmds['git'], commit), None, cargs)
+    do_cmd("./autogen.sh", None, cargs)
 
     print "[+] Compiling %s with test/afl/%s..." % (cdir, compile_cmd)
     os.chdir('./test/afl')
-    do_cmd("%s" % (compile_cmd), None)
+    do_cmd("%s" % (compile_cmd), None, cargs)
     os.chdir(curr_dir)
 
     return
 
-def do_cmd(cmd, tmp_file):
+def do_cmd(cmd, tmp_file, cargs):
 
     out = []
+
+    if cargs.verbose:
+        print "    CMD: %s" % cmd
 
     fh = None
     if tmp_file:
@@ -102,8 +105,11 @@ def do_cmd(cmd, tmp_file):
     else:
         fh = open(os.devnull, 'w')
 
-    subprocess.call(cmd, stdin=None,
-            stdout=fh, stderr=subprocess.STDOUT, shell=True)
+    if cargs.verbose and not tmp_file:
+        subprocess.call(cmd, stdin=None, shell=True)
+    else:
+        subprocess.call(cmd, stdin=None,
+                stdout=fh, stderr=subprocess.STDOUT, shell=True)
 
     fh.close()
 
@@ -121,6 +127,8 @@ def parse_cmdline():
     p.add_argument("--fwknop-git", type=str,
             help="Location of fwknop git repository",
             default="https://github.com/mrash/fwknop.git")
+    p.add_argument("-v", "--verbose", action='store_true',
+            help="Verbose mode", default=False)
 
     return p.parse_args()
 
