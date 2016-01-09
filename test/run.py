@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from aflcov import *
+import argparse
 import sys, os
 try:
     import subprocess32 as subprocess
@@ -9,11 +10,14 @@ except ImportError:
 
 def main():
 
+    cargs = parse_cmdline()
+
     ### config
     tmp_file      = './tmp_cmd.out'
     test_cmd      = './test-afl-cov.py'
 
-    fwknop_git    = 'https://github.com/mrash/fwknop'
+    ### the AFL test cases in the test suite are built against this
+    ### commit in the fwknop code base
     fwknop_commit = 'e3ae6747'
 
     fwknop_codecov_dir     = 'fwknop-codecov.git'
@@ -28,6 +32,7 @@ def main():
         'lcov':'',
         'make':'',
         'genhtml':'',
+        'afl-fuzz':'',
         'python':'',
     }
 
@@ -45,12 +50,16 @@ def main():
     ### clone the fwknop repository since the test suite operates
     ### against fwknop code
     if not is_dir(fwknop_codecov_dir):
-        print "[+] (Code cov) cloning fwknop repo: %s" % (fwknop_git)
+        print "[+] (Code cov) cloning fwknop repo: %s" % (cargs.fwknop_git)
         do_cmd("%s clone %s %s" % (cmds['git'],
-            fwknop_git, fwknop_codecov_dir), None)
+            cargs.fwknop_git, fwknop_codecov_dir), None)
+
+    if not is_dir(fwknop_codecov_dir):
+        print "[*] Could not clone %s, set a different --fwknop-git path?"
+        return
 
     if not is_dir(fwknop_afl_dir):
-        print "[+] (AFL support) Cloning fwknop repo: %s" % (fwknop_git)
+        print "[+] (AFL support) Cloning fwknop repo: %s" % (cargs.fwknop_git)
         do_cmd("%s clone %s %s" % (cmds['git'],
             fwknop_codecov_dir, fwknop_afl_dir), None)
 
@@ -61,6 +70,7 @@ def main():
             fwknop_commit, fwknop_afl_compile, cmds)
 
     ### run the actual tests
+    print "[+] Running afl-cov tests..."
     subprocess.call("%s %s" % (cmds['python'], test_cmd),
             stdin=None, shell=True)
 
@@ -70,12 +80,13 @@ def build_fwknop(cdir, commit, compile_cmd, cmds):
 
     curr_dir = os.getcwd()
     os.chdir(cdir)
+    if os.path.exists('./server/.libs/fwknopd'):
+        do_cmd("%s clean" % (cmds['make']), None)
     do_cmd("%s checkout %s" % (cmds['git'], commit), None)
     do_cmd("./autogen.sh", None)
-    os.chdir(curr_dir)
 
     print "[+] Compiling %s with test/afl/%s..." % (cdir, compile_cmd)
-    os.chdir(cdir + '/test/afl')
+    os.chdir('./test/afl')
     do_cmd("%s" % (compile_cmd), None)
     os.chdir(curr_dir)
 
@@ -102,6 +113,16 @@ def do_cmd(cmd, tmp_file):
                 out.append(line.rstrip('\n'))
 
     return out
+
+def parse_cmdline():
+
+    p = argparse.ArgumentParser()
+
+    p.add_argument("--fwknop-git", type=str,
+            help="Location of fwknop git repository",
+            default="https://github.com/mrash/fwknop.git")
+
+    return p.parse_args()
 
 if __name__ == "__main__":
     sys.exit(main())
