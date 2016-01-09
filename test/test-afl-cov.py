@@ -23,7 +23,7 @@
 #  USA
 #
 
-from shutil import rmtree
+from shutil import rmtree, copyfile
 from aflcov import *
 import unittest
 import time
@@ -81,6 +81,8 @@ class TestAflCov(unittest.TestCase):
 
         ### now start AFL and let it run for longer than --sleep in the
         ### generator script - then look for the coverage directory
+        copyfile('afl/server-access-redir.sh',
+                'fwknop-afl.git/test/afl/fuzzing-wrappers/server-access-redir.sh')
         curr_dir = os.getcwd()
         os.chdir('./fwknop-afl.git/test/afl')
         subprocess.Popen([self.live_afl_cmd])
