@@ -47,7 +47,7 @@ class TestAflCov(unittest.TestCase):
     top_out_dir  = './fwknop-afl.git/test/afl/fuzzing-output/server-access.out'
     live_afl_cmd = './fuzzing-wrappers/server-access-redir.sh'
 
-    def run_cmd(self, cmd):
+    def do_cmd(self, cmd):
         out = []
         fh = open(self.tmp_file, 'w')
         subprocess.call(cmd, stdin=None,
@@ -62,18 +62,21 @@ class TestAflCov(unittest.TestCase):
         with open(self.version_file, 'r') as f:
             version = f.readline().rstrip()
         self.assertTrue(version
-                in ''.join(self.run_cmd("%s --version" % (self.afl_cov_cmd))),
+                in ''.join(self.do_cmd("%s --version" % (self.afl_cov_cmd))),
                 "afl-cov --version does not match VERSION file")
 
     def test_help(self):
         self.assertTrue('--verbose'
-                in ''.join(self.run_cmd("%s -h" % (self.afl_cov_cmd))),
+                in ''.join(self.do_cmd("%s -h" % (self.afl_cov_cmd))),
                 "--verbose not in -h output")
 
     def test_live(self):
 
-        if is_dir(self.top_out_dir):
-            rmtree(self.top_out_dir)
+        if is_dir(os.path.dirname(self.top_out_dir)):
+            if is_dir(self.top_out_dir):
+                rmtree(self.top_out_dir)
+        else:
+            os.mkdir(os.path.dirname(self.top_out_dir))
 
         ### start up afl-cov in the background before AFL is running
         try:
@@ -120,22 +123,22 @@ class TestAflCov(unittest.TestCase):
                         % (self.top_out_dir + '/cov'))
 
     def test_queue_limit_5(self):
-        out_str = ''.join(self.run_cmd("%s --afl-queue-id-limit 5 --overwrite" \
+        out_str = ''.join(self.do_cmd("%s --afl-queue-id-limit 5 --overwrite" \
                         % (self.single_generator)))
         self.assertTrue('Final lcov web report' in out_str
                 and "New 'line' coverage: 1571" in out_str)
 
     def test_overwrite_dir(self):
         ### generate coverage, and then try to regenerate without --overwrite
-        self.run_cmd("%s --afl-queue-id-limit 1 --overwrite" \
+        self.do_cmd("%s --afl-queue-id-limit 1 --overwrite" \
                         % (self.single_generator))
-        out_str = ''.join(self.run_cmd("%s --afl-queue-id-limit 1" \
+        out_str = ''.join(self.do_cmd("%s --afl-queue-id-limit 1" \
                         % (self.single_generator)))
         self.assertTrue("use --overwrite" in out_str,
                 "Missing --overwrite not caught")
 
     def test_queue_limit_5_parallel(self):
-        out_str = ''.join(self.run_cmd("%s --afl-queue-id-limit 5 --overwrite" \
+        out_str = ''.join(self.do_cmd("%s --afl-queue-id-limit 5 --overwrite" \
                         % (self.parallel_generator)))
         self.assertTrue('Final lcov web report' in out_str
                 and "New 'line' coverage: 1571" in out_str
