@@ -372,9 +372,10 @@ def write_cov(cpath, cov, cargs):
     return
 
 def rm_prev_cov_files(ct):
-    os.remove(ct['prev_lcov_base'])
-    os.remove(ct['prev_lcov_info'])
-    os.remove(ct['prev_lcov_info_final'])
+    for cname in ['prev_lcov_base', 'prev_lcov_info',
+            'prev_lcov_info_tmp', 'prev_lcov_info_final']:
+        if cname in ct and os.path.exists(ct[cname]):
+            os.remove(ct[cname])
     return
 
 def write_status(status_file):
@@ -681,6 +682,9 @@ def gen_paths(fuzz_dir, cov_paths, afl_file, cargs):
         cp['prev_lcov_info'] = cov_paths['lcov_dir'] + '/' \
                 + basedir + '/' + os.path.basename(cp['prev_file']) \
                 + '.lcov_info'
+        cp['prev_lcov_info_tmp'] = cov_paths['lcov_dir'] + '/' \
+                + basedir + '/' + os.path.basename(cp['prev_file']) \
+                + '.lcov_info_tmp'
         cp['prev_lcov_info_final'] = cov_paths['lcov_dir'] + \
                 '/' + basedir + '/' + os.path.basename(cp['prev_file']) \
                 + '.lcov_info_final'
