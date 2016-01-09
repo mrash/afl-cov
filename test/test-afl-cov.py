@@ -23,7 +23,7 @@
 #  USA
 #
 
-from shutil import rmtree, copyfile
+from shutil import rmtree, copy
 from aflcov import *
 import unittest
 import time
@@ -76,16 +76,28 @@ class TestAflCov(unittest.TestCase):
             rmtree(self.top_out_dir)
 
         ### start up afl-cov in the background before AFL is running
-        subprocess.Popen([self.single_generator_live])
+        try:
+            subprocess.Popen([self.single_generator_live])
+        except OSError:
+            return self.assertTrue(False, "Could not run generator cmd: %s" \
+                    % (self.single_generator_live))
         time.sleep(2)
 
         ### now start AFL and let it run for longer than --sleep in the
         ### generator script - then look for the coverage directory
-        copyfile('afl/server-access-redir.sh',
-                'fwknop-afl.git/test/afl/fuzzing-wrappers/server-access-redir.sh')
+        wrapper = 'fwknop-afl.git/test/afl/fuzzing-wrappers/server-access-redir.sh'
+        if os.path.exists(wrapper):
+            os.remove(wrapper)
+        copy('afl/server-access-redir.sh', wrapper)
         curr_dir = os.getcwd()
         os.chdir('./fwknop-afl.git/test/afl')
-        subprocess.Popen([self.live_afl_cmd])
+
+        try:
+            subprocess.Popen([self.live_afl_cmd])
+        except OSError:
+            os.chdir(curr_dir)
+            return self.assertTrue(False,
+                    "Could not run live_afl_cmd: %s" % (self.live_afl_cmd))
         os.chdir(curr_dir)
 
         time.sleep(3)
