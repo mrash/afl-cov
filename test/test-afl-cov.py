@@ -23,7 +23,11 @@
 #  USA
 #
 
+from shutil import rmtree
+from aflcov import *
 import unittest
+import time
+import signal
 import os
 try:
     import subprocess32 as subprocess
@@ -38,6 +42,10 @@ class TestAflCov(unittest.TestCase):
     afl_cov_cmd  = '../afl-cov'
     single_generator   = './afl/afl-cov-generator.sh'
     parallel_generator = './afl/afl-cov-generator-parallel.sh'
+    single_generator_live = './afl/afl-cov-generator-live.sh'
+
+    top_out_dir  = './fwknop-afl.git/test/afl/fuzzing-output/server-access.out'
+    live_afl_cmd = './fuzzing-wrappers/server-access-redir.sh'
 
     def run_cmd(self, cmd):
         out = []
@@ -61,6 +69,41 @@ class TestAflCov(unittest.TestCase):
         self.assertTrue('--verbose'
                 in ''.join(self.run_cmd("%s -h" % (self.afl_cov_cmd))),
                 "--verbose not in -h output")
+
+    def test_live(self):
+
+        if is_dir(self.top_out_dir):
+            rmtree(self.top_out_dir)
+
+        ### start up afl-cov in the background before AFL is running
+        subprocess.Popen([self.single_generator_live])
+        time.sleep(2)
+
+        ### now start AFL and let it run for longer than --sleep in the
+        ### generator script - then look for the coverage directory
+        curr_dir = os.getcwd()
+        os.chdir('./fwknop-afl.git/test/afl')
+        subprocess.Popen([self.live_afl_cmd])
+        os.chdir(curr_dir)
+
+        time.sleep(3)
+
+        ### get the afl-cov and afl PID's and kill processes if necessary
+        afl_pid = get_running_pid(self.top_out_dir + '/fuzzer_stats',
+                'fuzzer_pid\s+\:\s+(\d+)')
+        if afl_pid:
+            os.kill(afl_pid, signal.SIGTERM)
+
+        afl_cov_pid = get_running_pid(self.top_out_dir + '/cov/afl-cov-status',
+                'afl_cov_pid\s+\:\s+(\d+)')
+        if afl_cov_pid:
+            os.kill(afl_cov_pid, signal.SIGTERM)
+
+        ### check for the coverage directory since afl-cov should have
+        ### seen the running AFL instance by now
+        return self.assertTrue(is_dir(self.top_out_dir + '/cov'),
+                "live coverage directory '%s' does not exist" \
+                        % (self.top_out_dir + '/cov'))
 
     def test_queue_limit_5(self):
         out_str = ''.join(self.run_cmd("%s --afl-queue-id-limit 5 --overwrite" \
