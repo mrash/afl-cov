@@ -601,11 +601,11 @@ def gen_web_cov_report(fuzz_dir, cov_paths, cargs):
 
 def is_afl_fuzz_running(cargs):
 
-    found = 0
+    pid = None
     stats_file = cargs.afl_fuzzing_dir + '/fuzzer_stats'
 
     if os.path.exists(stats_file):
-        found = is_pid_running(stats_file)
+        pid = get_running_pid(stats_file, 'fuzzer_pid\s+\:\s+(\d+)')
     else:
         for p in os.listdir(cargs.afl_fuzzing_dir):
             stats_file = cargs.afl_fuzzing_dir + '/' + p + '/fuzzer_stats'
@@ -613,30 +613,32 @@ def is_afl_fuzz_running(cargs):
                 ### allow a single running AFL instance in parallel mode
                 ### to mean that AFL is running (and may be generating
                 ### new code coverage)
-                found = is_pid_running(stats_file)
-                if found:
+                pid = get_running_pid(stats_file, 'fuzzer_pid\s+\:\s+(\d+)')
+                if pid:
                     break
 
-    return found
+    return pid
 
-def is_pid_running(stats_file):
-    found = 0
+def get_running_pid(stats_file, pid_re):
+    pid = None
+    if not os.path.exists(stats_file):
+        return pid
     with open(stats_file, 'r') as f:
         for line in f:
             line = line.strip()
             ### fuzzer_pid     : 13238
-            m = re.search('fuzzer_pid\s+\:\s+(\d+)', line)
+            m = re.search(pid_re, line)
             if m and m.group(1):
-                pid = int(m.group(1))
+                is_running = int(m.group(1))
                 try:
-                    os.kill(pid, 0)
+                    os.kill(is_running, 0)
                 except OSError as e:
                     if e.errno == errno.EPERM:
-                        found = 1
+                        pid = is_running
                 else:
-                    found = 1
+                    pid = is_running
                 break
-    return found
+    return pid
 
 def gen_paths(fuzz_dir, cov_paths, afl_file, cargs):
 
