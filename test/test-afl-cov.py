@@ -24,6 +24,7 @@
 #
 
 import unittest
+import os
 try:
     import subprocess32 as subprocess
 except ImportError:
@@ -34,6 +35,9 @@ class TestAflCov(unittest.TestCase):
     ### set a few paths
     tmp_file     = './tmp_cmd.out'
     version_file = '../VERSION'
+    afl_cov_cmd  = '../afl-cov'
+    single_generator   = './afl/afl-cov-generator.sh'
+    parallel_generator = './afl/afl-cov-generator-parallel.sh'
 
     def run_cmd(self, cmd):
         out = []
@@ -49,10 +53,37 @@ class TestAflCov(unittest.TestCase):
     def test_version(self):
         with open(self.version_file, 'r') as f:
             version = f.readline().rstrip()
-        self.assertTrue(version in ''.join(self.run_cmd('../afl-cov --version')))
+        self.assertTrue(version
+                in ''.join(self.run_cmd("%s --version" % (self.afl_cov_cmd))),
+                "afl-cov --version does not match VERSION file")
 
     def test_help(self):
-        self.assertTrue('--verbose' in ''.join(self.run_cmd('../afl-cov -h')))
+        self.assertTrue('--verbose'
+                in ''.join(self.run_cmd("%s -h" % (self.afl_cov_cmd))),
+                "--verbose not in -h output")
+
+    def test_queue_limit_5(self):
+        out_str = ''.join(self.run_cmd("%s --afl-queue-id-limit 5 --overwrite" \
+                        % (self.single_generator)))
+        self.assertTrue('Final lcov web report' in out_str
+                and "New 'line' coverage: 1571" in out_str)
+
+    def test_overwrite_dir(self):
+        ### generate coverage, and then try to regenerate without --overwrite
+        self.run_cmd("%s --afl-queue-id-limit 1 --overwrite" \
+                        % (self.single_generator))
+        out_str = ''.join(self.run_cmd("%s --afl-queue-id-limit 1" \
+                        % (self.single_generator)))
+        self.assertTrue("use --overwrite" in out_str,
+                "Missing --overwrite not caught")
+
+    def test_queue_limit_5_parallel(self):
+        out_str = ''.join(self.run_cmd("%s --afl-queue-id-limit 5 --overwrite" \
+                        % (self.parallel_generator)))
+        self.assertTrue('Final lcov web report' in out_str
+                and "New 'line' coverage: 1571" in out_str
+                and "Imported 145 new test cases" in out_str
+                and "Imported 212 new test cases" in out_str)
 
 if __name__ == "__main__":
     unittest.main()
