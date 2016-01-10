@@ -42,7 +42,7 @@ class TestAflCov(unittest.TestCase):
     afl_cov_cmd  = '../afl-cov'
     single_generator   = './afl/afl-cov-generator.sh'
     parallel_generator = './afl/afl-cov-generator-parallel.sh'
-    afl_cov_live = './afl/afl-cov-generator-live.sh'
+    afl_cov_live       = './afl/afl-cov-generator-live.sh'
 
     top_out_dir  = './fwknop-afl.git/test/afl/fuzzing-output/server-access.out'
     live_afl_cmd = './fuzzing-wrappers/server-access-redir.sh'
@@ -103,6 +103,11 @@ class TestAflCov(unittest.TestCase):
         self.assertTrue('--verbose'
                 in ''.join(self.do_cmd("%s -h" % (self.afl_cov_cmd))),
                 "--verbose not in -h output")
+
+    def test_stop_requires_fuzz_dir(self):
+        self.assertTrue('Must set'
+                in ''.join(self.do_cmd("%s --stop-afl" % (self.afl_cov_cmd))),
+                "--afl-fuzzing-dir missing from --stop-afl mode")
 
     def test_live_parallel(self):
 
