@@ -1,4 +1,4 @@
-afl-cov-0.4 (01//2016):
+afl-cov-0.4 (01/09/2016):
     - Add support for parallelized execution runs of AFL. This is done by
       tracking all fuzzing directory instances created with afl-fuzz '-M' or
       '-S'. These directories are created in the main sync directory
@@ -7,8 +7,15 @@ afl-cov-0.4 (01//2016):
     - Default to not include branch coverage data within code coverag results
       This is because AFL commonly build up many hundreds of test cases, and
       generating branch coverage across all of these cases may slow afl-cov
-      down significantly. However, if branch coverage is desired, just add the
-      new --enable-branch-coverage argument.
+      down significantly. However, if branch coverage is desired or required,
+      just add the new --enable-branch-coverage argument.
+    - Added a test suite in the test/ directory that leverages the python
+      unittest module. Proper operation of the test suite requires afl-fuzz
+      to be installed, and tests are performed against a paricular commit
+      (e3ae6747) from the fwknop project for which AFL test cases were
+      pre-built.
+    - Bug fix reported by @kcwu about some files not showing up in zero
+      coverage lcov web reports.
 
 afl-cov-0.3 (06/29/2015):
     - Add --background mode to facilitate clean integration with afl-fuzz
