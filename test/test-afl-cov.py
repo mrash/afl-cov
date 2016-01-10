@@ -42,10 +42,11 @@ class TestAflCov(unittest.TestCase):
     afl_cov_cmd  = '../afl-cov'
     single_generator   = './afl/afl-cov-generator.sh'
     parallel_generator = './afl/afl-cov-generator-parallel.sh'
-    single_generator_live = './afl/afl-cov-generator-live.sh'
+    afl_cov_live = './afl/afl-cov-generator-live.sh'
 
     top_out_dir  = './fwknop-afl.git/test/afl/fuzzing-output/server-access.out'
     live_afl_cmd = './fuzzing-wrappers/server-access-redir.sh'
+    live_parallel_afl_cmd = './fuzzing-wrappers/server-access-parallel-redir.sh'
 
     def do_cmd(self, cmd):
         out = []
@@ -57,6 +58,39 @@ class TestAflCov(unittest.TestCase):
             for line in f:
                 out.append(line.rstrip('\n'))
         return out
+
+    ### start afl-cov in --live mode - this is for both single and
+    ### parallel instance testing
+    def live_init(self):
+        if is_dir(os.path.dirname(self.top_out_dir)):
+            if is_dir(self.top_out_dir):
+                rmtree(self.top_out_dir)
+        else:
+            os.mkdir(os.path.dirname(self.top_out_dir))
+
+        ### start up afl-cov in the background before AFL is running
+        try:
+            subprocess.Popen([self.afl_cov_live])
+        except OSError:
+            return self.assertTrue(False, "Could not run generator cmd: %s" \
+                    % (self.afl_cov_live))
+        time.sleep(2)
+        return
+
+    def afl_stop(self):
+
+        ### stop any afl-fuzz instances
+        self.do_cmd("%s --stop-afl --afl-fuzzing-dir %s" \
+                % (self.afl_cov_cmd, self.top_out_dir))
+
+        ### now stop afl-cov
+        afl_cov_pid = get_running_pid(
+                self.top_out_dir + '/cov/afl-cov-status',
+                'afl_cov_pid\s+\:\s+(\d+)')
+        if afl_cov_pid:
+            os.kill(afl_cov_pid, signal.SIGTERM)
+
+        return
 
     def test_version(self):
         with open(self.version_file, 'r') as f:
@@ -70,24 +104,53 @@ class TestAflCov(unittest.TestCase):
                 in ''.join(self.do_cmd("%s -h" % (self.afl_cov_cmd))),
                 "--verbose not in -h output")
 
+    def test_live_parallel(self):
+
+        self.live_init()
+
+        ### put the wrapper in place
+        wrapper ='fwknop-afl.git/test/afl/fuzzing-wrappers' + \
+                '/server-access-parallel-redir.sh'
+        if os.path.exists(wrapper):
+            os.remove(wrapper)
+        copy('afl/server-access-parallel-redir.sh', wrapper)
+        curr_dir = os.getcwd()
+        os.chdir('./fwknop-afl.git/test/afl')
+
+        ### now start two copies of AFL
+        try:
+            subprocess.Popen([self.live_parallel_afl_cmd, "-M", "fuzzer01"])
+        except OSError:
+            os.chdir(curr_dir)
+            return self.assertTrue(False,
+                    "Could not run live_parallel_afl_cmd: %s -M fuzzer01" \
+                            % (self.live_parallel_afl_cmd))
+
+        try:
+            subprocess.Popen([self.live_parallel_afl_cmd, "-S", "fuzzer02"])
+        except OSError:
+            os.chdir(curr_dir)
+            return self.assertTrue(False,
+                    "Could not run live_parallel_afl_cmd: %s -S fuzzer02" \
+                            % (self.live_parallel_afl_cmd))
+
+        os.chdir(curr_dir)
+
+        time.sleep(3)
+
+        self.afl_stop()
+
+        ### check for the coverage directory since afl-cov should have
+        ### seen the running AFL instance by now
+        return self.assertTrue(is_dir(self.top_out_dir + '/cov'),
+                "live coverage directory '%s' does not exist" \
+                        % (self.top_out_dir + '/cov'))
+
     def test_live(self):
 
-        if is_dir(os.path.dirname(self.top_out_dir)):
-            if is_dir(self.top_out_dir):
-                rmtree(self.top_out_dir)
-        else:
-            os.mkdir(os.path.dirname(self.top_out_dir))
+        self.live_init()
 
-        ### start up afl-cov in the background before AFL is running
-        try:
-            subprocess.Popen([self.single_generator_live])
-        except OSError:
-            return self.assertTrue(False, "Could not run generator cmd: %s" \
-                    % (self.single_generator_live))
-        time.sleep(2)
-
-        ### now start AFL and let it run for longer than --sleep in the
-        ### generator script - then look for the coverage directory
+        ### put the wrapper in place
         wrapper = 'fwknop-afl.git/test/afl/fuzzing-wrappers/server-access-redir.sh'
         if os.path.exists(wrapper):
             os.remove(wrapper)
@@ -95,6 +158,8 @@ class TestAflCov(unittest.TestCase):
         curr_dir = os.getcwd()
         os.chdir('./fwknop-afl.git/test/afl')
 
+        ### now start AFL and let it run for longer than --sleep in the
+        ### generator script - then look for the coverage directory
         try:
             subprocess.Popen([self.live_afl_cmd])
         except OSError:
@@ -105,16 +170,7 @@ class TestAflCov(unittest.TestCase):
 
         time.sleep(3)
 
-        ### get the afl-cov and afl PID's and kill processes if necessary
-        afl_pid = get_running_pid(self.top_out_dir + '/fuzzer_stats',
-                'fuzzer_pid\s+\:\s+(\d+)')
-        if afl_pid:
-            os.kill(afl_pid, signal.SIGTERM)
-
-        afl_cov_pid = get_running_pid(self.top_out_dir + '/cov/afl-cov-status',
-                'afl_cov_pid\s+\:\s+(\d+)')
-        if afl_cov_pid:
-            os.kill(afl_cov_pid, signal.SIGTERM)
+        self.afl_stop()
 
         ### check for the coverage directory since afl-cov should have
         ### seen the running AFL instance by now
