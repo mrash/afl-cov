@@ -35,6 +35,7 @@ import glob
 import string
 import argparse
 import time
+import signal
 import sys, os
 
 try:
@@ -57,6 +58,9 @@ def main():
     if cargs.version:
         print "afl-cov-" + __version__
         return exit_success
+
+    if cargs.stop_afl:
+        return not stop_afl(cargs)
 
     if not validate_args(cargs):
         return exit_failure
@@ -913,6 +917,49 @@ def logr(pstr, log_file, cargs):
     append_file(pstr, log_file)
     return
 
+def stop_afl(cargs):
+
+    rv = True
+
+    ### note that this function only looks for afl-fuzz processes - it does not
+    ### stop afl-cov processes since they will stop on their own after afl-fuzz
+    ### is also stopped.
+
+    if not cargs.afl_fuzzing_dir:
+        print "[*] Must set --afl-fuzzing-dir"
+        return False
+
+    if not is_dir(cargs.afl_fuzzing_dir):
+        print "[*] Doesn't look like AFL fuzzing directory '%s' exists." \
+                % cargs.afl_fuzzing_dir
+        return False
+
+    if os.path.exists(cargs.afl_fuzzing_dir + '/fuzzer_stats'):
+        afl_pid = get_running_pid(cargs.afl_fuzzing_dir + '/fuzzer_stats',
+                'fuzzer_pid\s+\:\s+(\d+)')
+        if afl_pid:
+            print "[+] Stopping running afl-fuzz instance, PID: %d" % afl_pid
+            os.kill(afl_pid, signal.SIGTERM)
+        else:
+            print "[-] No running afl-fuzz instance"
+            rv = False
+    else:
+        found = False
+        for p in os.listdir(cargs.afl_fuzzing_dir):
+            stats_file = cargs.afl_fuzzing_dir + '/' + p + '/fuzzer_stats'
+            if os.path.exists(stats_file):
+                afl_pid = get_running_pid(stats_file, 'fuzzer_pid\s+\:\s+(\d+)')
+                if afl_pid:
+                    print "[+] Stopping running afl-fuzz instance, PID: %d" \
+                            % afl_pid
+                    os.kill(afl_pid, signal.SIGTERM)
+                    found = True
+        if not found:
+            print "[-] No running afl-fuzz instance"
+            rv = False
+
+    return rv
+
 def parse_cmdline():
 
     p = argparse.ArgumentParser()
@@ -974,6 +1021,9 @@ def parse_cmdline():
             help="Path to lcov command", default="/usr/bin/lcov")
     p.add_argument("--genhtml-path", type=str,
             help="Path to genhtml command", default="/usr/bin/genhtml")
+    p.add_argument("--stop-afl", action='store_true',
+            help="Stop all running afl-fuzz instances associated with --afl-fuzzing-dir <dir>",
+            default=False)
     p.add_argument("-v", "--verbose", action='store_true',
             help="Verbose mode", default=False)
     p.add_argument("-V", "--version", action='store_true',
