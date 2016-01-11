@@ -79,11 +79,11 @@ $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
 --code-dir .
 ```
 
-`/path/to/afl-fuzz-output/` is the output directory of afl-fuzz.  
+`/path/to/afl-fuzz-output/` is the output directory of afl-fuzz.
 
 The `AFL_FILE` string above refers to the test case file that AFL will
-build in the `queue/` directory under `/path/to/project-fuzz`. Just leave this
-string as-is - `afl-cov` will automatically substitute it with each AFL
+build in the `queue/` directory under `/path/to/afl-fuzz-output`. Just leave this
+string as-is since `afl-cov` will automatically substitute it with each AFL
 `queue/id:NNNNNN*` in succession as it builds the code coverage reports.
 
 Also, in the above command, this handles the case where the AFL fuzzing cycle
@@ -102,9 +102,8 @@ $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
 `afl-fuzz`:
 
 ```bash
-$ cd /path/to/project-fuzzing/
-$ LD_LIBRARY_PATH=./lib/.libs afl-fuzz -T somebin -t 1000 -i ./test-cases/ \
--o /path/to/afl-fuzz-output/ ./bin/.libs/somebin -a -b -c
+$ LD_LIBRARY_PATH=./lib/.libs afl-fuzz -T somebin -t 1000 \
+-i /path/to/test-cases/ -o /path/to/afl-fuzz-output/ ./bin/.libs/somebin -a -b -c
 ```
 
 The familiar AFL status screen will be displayed, and `afl-cov` will start
