@@ -59,11 +59,9 @@ against the original sources or after `afl-fuzz` has been stopped.
 
 Now, in more detail:
 
-* Copy the project sources to two different directories
-`/path/to/afl-fuzz-output/` and `/path/to/project-gcov/`. The first
-will contain the project binaries compiled for AFL fuzzing, and the second will
-contain the project binaries compiled for gcov profiling support
-(gcc `-fprofile-arcs -ftest-coverage`).
+* Copy the project sources to a new directory, `/path/to/project-gcov/`.
+This directory should contain the project binaries compiled for gcov profiling
+support (gcc `-fprofile-arcs -ftest-coverage`).
 
 * Start up `afl-cov` in `--live` mode before also starting the `afl-fuzz`
 fuzzing cycle. The command line arguments to `afl-cov` must specify the path to
@@ -80,6 +78,8 @@ $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
 "cat AFL_FILE | LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -a -b -c" \
 --code-dir .
 ```
+
+`/path/to/afl-fuzz-output/` is the output directory of afl-fuzz.  
 
 The `AFL_FILE` string above refers to the test case file that AFL will
 build in the `queue/` directory under `/path/to/project-fuzz`. Just leave this
