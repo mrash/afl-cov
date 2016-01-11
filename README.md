@@ -13,11 +13,12 @@ particular function. In addition, `afl-cov` produces a "zero coverage" report
 of functions and lines that were never executed during any AFL fuzzing run.
 
 Although of no use to AFL itself, the main application of `afl-cov` is to wrap
-some automation around gcov and thereby provide data on how to maximize code
-coverage with AFL fuzzing runs. Manual interpretation of cumulative gcov
-results from AFL test cases is usually still required, but the "fiddly" steps
-of iterating over all test cases and generating code coverage reports (along
-with the "zero coverage" report) is automated by `afl-cov`.
+some automation around gcov together with AFL test cases and thereby provide
+data on how to maximize code coverage with AFL fuzzing runs. Manual
+interpretation of cumulative gcov results from AFL test cases is usually still
+required, but the "fiddly" steps of iterating over all test cases and
+generating code coverage reports (along with the "zero coverage" report) is
+automated by `afl-cov`.
 
 Producing code coverage data for AFL test cases is an important step to try
 and maximize code coverage, and thereby help to maximize the effectiveness of
@@ -52,10 +53,12 @@ is:
 1. Have a target project compiled and known to work with AFL.
 2. Create a spare copy of the project sources, and compile this copy with gcov
 profiling support.
-3. Run `afl-cov` against the copy while `afl-fuzz` is building test cases
-against the original sources or after `afl-fuzz` has been stopped.
+3. Run `afl-cov` against the copy either while `afl-fuzz` is building test
+cases against the original sources, or after `afl-fuzz` has been stopped.
 4. Review the cumulative code coverage results in the final web report.
-5. Iterate.
+5. Iterate to achieve higher coverage results. This might involve building
+better initial test cases for AFL, or sometimes changing project sources
+themselves.
 
 Now, in more detail:
 
