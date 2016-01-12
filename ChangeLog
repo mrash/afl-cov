@@ -1,3 +1,11 @@
+afl-cov-0.5 (01/11/2016):
+    - For --live mode operations, add the same core pattern detection logic to
+      afl-cov that is implemented by afl-fuzz. This helps to ensure that the
+      environment in which afl-cov is running is consistent with what afl-fuzz
+      expects to see.
+    - Make sure --afl-fuzzing-dir exists in --func-search and --line-search
+      modes.
+
 afl-cov-0.4 (01/09/2016):
     - Add support for parallelized execution runs of AFL. This is done by
       tracking all fuzzing directory instances created with afl-fuzz '-M' or
@@ -11,7 +19,7 @@ afl-cov-0.4 (01/09/2016):
       just add the new --enable-branch-coverage argument.
     - Added a test suite in the test/ directory that leverages the python
       unittest module. Proper operation of the test suite requires afl-fuzz
-      to be installed, and tests are performed against a paricular commit
+      to be installed, and tests are performed against a particular commit
       (e3ae6747) from the fwknop project for which AFL test cases were
       pre-built.
     - Bug fix reported by @kcwu about some files not showing up in zero

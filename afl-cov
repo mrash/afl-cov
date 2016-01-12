@@ -2,7 +2,7 @@
 #
 #  File: afl-cov
 #
-#  Version: 0.4
+#  Version: 0.5
 #
 #  Purpose: Perform lcov coverage diff's against each AFL queue file to see
 #           new functions and line coverage evolve from an AFL fuzzing cycle.
@@ -43,7 +43,7 @@ try:
 except ImportError:
     import subprocess
 
-__version__ = '0.4'
+__version__ = '0.5'
 
 WANT_OUTPUT = 1
 NO_OUTPUT   = 0
@@ -853,6 +853,10 @@ def validate_args(cargs):
             print "[*] Must set --src-file in --line-search mode"
             return False
 
+    if cargs.live and not cargs.ignore_core_pattern:
+        if not check_core_pattern():
+            return False
+
     if not cargs.live and not is_dir(cargs.afl_fuzzing_dir):
         print "[*] It doesn't look like directory '%s' exists" \
             % (cargs.afl_fuzzing_dir)
@@ -963,6 +967,23 @@ def stop_afl(cargs):
 
     return rv
 
+def check_core_pattern():
+
+    rv = True
+
+    core_pattern_file = '/proc/sys/kernel/core_pattern'
+
+    ### check /proc/sys/kernel/core_pattern to see if afl-fuzz will
+    ### accept it
+    if os.path.exists(core_pattern_file):
+        with open(core_pattern_file, 'r') as f:
+            if f.readline().rstrip()[0] == '|':
+                ### same logic as implemented by afl-fuzz itself
+                print "[*] afl-fuzz requires 'echo core >%s'" \
+                        % core_pattern_file
+                rv = False
+    return rv
+
 def parse_cmdline():
 
     p = argparse.ArgumentParser()
@@ -1020,6 +1041,9 @@ def parse_cmdline():
     p.add_argument("--afl-queue-id-limit", type=int,
             help="Limit the number of id:NNNNNN* files processed in the AFL queue/ directory",
             default=0)
+    p.add_argument("--ignore-core-pattern", action='store_true',
+            help="Ignore the /proc/sys/kernel/core_pattern setting in --live mode",
+            default=False)
     p.add_argument("--lcov-path", type=str,
             help="Path to lcov command", default="/usr/bin/lcov")
     p.add_argument("--genhtml-path", type=str,

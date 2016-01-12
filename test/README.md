@@ -9,4 +9,4 @@ unit tests.
 
 When running the test suite, it is best to run the `run.py` script. However,
 individual unit test can be invoked as follows like this: `python ./test-afl-cov.py TestAflCov.test_<name>` (where `<name>` corresponds to a unit test method name
-in `test-afl-cov.py`.
+in `test-afl-cov.py`).

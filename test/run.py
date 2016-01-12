@@ -12,8 +12,6 @@ def main():
 
     cargs = parse_cmdline()
 
-    core_pattern_file = '/proc/sys/kernel/core_pattern'
-
     ### config
     tmp_file = './tmp_cmd.out'
     test_cmd = './test-afl-cov.py'
@@ -42,13 +40,9 @@ def main():
 
     ### check /proc/sys/kernel/core_pattern to see if afl-fuzz will
     ### accept it
-    if os.path.exists(core_pattern_file):
-        with open(core_pattern_file, 'r') as f:
-            if f.readline().rstrip()[0] == '|':
-                ### same logic as implemented by afl-fuzz itself
-                print "[*] afl-fuzz requires 'echo core >%s'" \
-                        % core_pattern_file
-                return
+    if not cargs.ignore_core_pattern:
+        if not check_core_pattern():
+            return
 
     ### make sure required system binaries are installed
     for cmd in cmds:
@@ -138,6 +132,9 @@ def parse_cmdline():
     p.add_argument("--fwknop-git", type=str,
             help="Location of fwknop git repository",
             default="https://github.com/mrash/fwknop.git")
+    p.add_argument("--ignore-core-pattern", action='store_true',
+            help="Ignore the /proc/sys/kernel/core_pattern setting in --live mode",
+            default=False)
     p.add_argument("-v", "--verbose", action='store_true',
             help="Verbose mode", default=False)
 
