@@ -12,9 +12,11 @@ def main():
 
     cargs = parse_cmdline()
 
+    core_pattern_file = '/proc/sys/kernel/core_pattern'
+
     ### config
-    tmp_file      = './tmp_cmd.out'
-    test_cmd      = './test-afl-cov.py'
+    tmp_file = './tmp_cmd.out'
+    test_cmd = './test-afl-cov.py'
 
     ### the AFL test cases in the test suite are built against this
     ### commit in the fwknop code base
@@ -38,8 +40,17 @@ def main():
 
     print "[+] Starting up afl-cov test suite..."
 
-    ### make sure required system binaries are installed
+    ### check /proc/sys/kernel/core_pattern to see if afl-fuzz will
+    ### accept it
+    if os.path.exists(core_pattern_file):
+        with open(core_pattern_file, 'r') as f:
+            if f.readline().rstrip()[0] == '|':
+                ### same logic as implemented by afl-fuzz itself
+                print "[*] afl-fuzz requires 'echo core >%s'" \
+                        % core_pattern_file
+                return
 
+    ### make sure required system binaries are installed
     for cmd in cmds:
         cmds[cmd] = which(cmd)
         if not cmds[cmd]:
@@ -70,7 +81,7 @@ def main():
             fwknop_afl_compile, cmds, cargs)
 
     ### run the actual tests
-    print "[+] Running afl-cov tests..."
+    print "[+] Running afl-cov tests (ignore 'Terminated' messages)..."
     subprocess.call("%s %s" % (cmds['python'], test_cmd),
             stdin=None, shell=True)
 

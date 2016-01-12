@@ -844,6 +844,9 @@ def validate_args(cargs):
             return False
 
     if cargs.func_search or cargs.line_search:
+        if not cargs.afl_fuzzing_dir:
+            print "[*] Must set --afl-fuzzing-dir"
+            return False
         if cargs.func_search and '()' not in cargs.func_search:
             cargs.func_search += '()'
         if cargs.line_search and not cargs.src_file:

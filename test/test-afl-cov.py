@@ -66,16 +66,16 @@ class TestAflCov(unittest.TestCase):
             if is_dir(self.top_out_dir):
                 rmtree(self.top_out_dir)
         else:
-            os.mkdir(os.path.dirname(self.top_out_dir))
+            if not is_dir(os.path.dirname(self.top_out_dir)):
+                os.mkdir(os.path.dirname(self.top_out_dir))
 
         ### start up afl-cov in the background before AFL is running
         try:
             subprocess.Popen([self.afl_cov_live])
         except OSError:
-            return self.assertTrue(False, "Could not run generator cmd: %s" \
-                    % (self.afl_cov_live))
+            return False
         time.sleep(2)
-        return
+        return True
 
     def afl_stop(self):
 
@@ -109,9 +109,21 @@ class TestAflCov(unittest.TestCase):
                 in ''.join(self.do_cmd("%s --stop-afl" % (self.afl_cov_cmd))),
                 "--afl-fuzzing-dir missing from --stop-afl mode")
 
+    def test_func_search_requires_fuzz_dir(self):
+        self.assertTrue('Must set'
+                in ''.join(self.do_cmd("%s --func-search test" % (self.afl_cov_cmd))),
+                "--afl-fuzzing-dir missing from --func-search mode")
+
+    def test_line_search_requires_fuzz_dir(self):
+        self.assertTrue('Must set'
+                in ''.join(self.do_cmd("%s --line-search 1234" % (self.afl_cov_cmd))),
+                "--afl-fuzzing-dir missing from --line-search mode")
+
     def test_live_parallel(self):
 
-        self.live_init()
+        if not self.live_init():
+            return self.assertTrue(False, "Could not run generator cmd: %s" \
+                    % (self.afl_cov_live))
 
         ### put the wrapper in place
         wrapper ='fwknop-afl.git/test/afl/fuzzing-wrappers' + \
@@ -145,6 +157,11 @@ class TestAflCov(unittest.TestCase):
 
         self.afl_stop()
 
+        if not (is_dir(self.top_out_dir + '/fuzzer01')
+                and is_dir(self.top_out_dir + '/fuzzer02')):
+            return self.assertTrue(False,
+                    "fuzzer01 or fuzzer02 directory missing")
+
         ### check for the coverage directory since afl-cov should have
         ### seen the running AFL instance by now
         return self.assertTrue(is_dir(self.top_out_dir + '/cov'),
@@ -153,7 +170,9 @@ class TestAflCov(unittest.TestCase):
 
     def test_live(self):
 
-        self.live_init()
+        if not self.live_init():
+            return self.assertTrue(False, "Could not run generator cmd: %s" \
+                    % (self.afl_cov_live))
 
         ### put the wrapper in place
         wrapper = 'fwknop-afl.git/test/afl/fuzzing-wrappers/server-access-redir.sh'
