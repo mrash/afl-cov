@@ -12,7 +12,7 @@ afl-cov-0.4 (01/09/2016):
       '-S'. These directories are created in the main sync directory
       ('afl-fuzz -o sync_dir'). The coverage results are calculated globally
       across all fuzzing instances.
-    - Default to not include branch coverage data within code coverag results
+    - Default to not include branch coverage data within code coverage results
       This is because AFL commonly build up many hundreds of test cases, and
       generating branch coverage across all of these cases may slow afl-cov
       down significantly. However, if branch coverage is desired or required,
