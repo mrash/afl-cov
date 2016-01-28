@@ -576,7 +576,8 @@ def gen_web_cov_report(fuzz_dir, cov_paths, cargs):
 
     cp = cov_paths['dirs'][fuzz_dir]
 
-    web_dir = cov_paths['web_dir']
+    web_dir  = cov_paths['web_dir']
+    web_link = web_dir + '/lcov-web-final.html'
 
     os.mkdir(cp['lcov_web_dir'])
     genhtml_opts = ''
@@ -592,15 +593,16 @@ def gen_web_cov_report(fuzz_dir, cov_paths, cargs):
             cov_paths, cargs, NO_OUTPUT)
 
     logr("[+] Final lcov web report: %s" \
-            % web_dir + '/lcov-web-final.html',
-            cov_paths['log_file'], cargs)
+            % web_link, cov_paths['log_file'], cargs)
+
+    if os.path.exists(web_link):
+        os.remove(web_link)
 
     if cp['lcov_web_dir'][0] == '/':
-        os.symlink(cp['lcov_web_dir'] + '/index.html',
-                web_dir + '/lcov-web-final.html')
+        os.symlink(cp['lcov_web_dir'] + '/index.html', web_link)
     else:
         os.symlink(os.getcwd() + '/' + cp['lcov_web_dir'] \
-                + '/index.html', web_dir + '/lcov-web-final.html')
+                + '/index.html', web_link)
 
     return
 
