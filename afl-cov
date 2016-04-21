@@ -59,6 +59,9 @@ def main():
         print "afl-cov-" + __version__
         return exit_success
 
+    if not check_requierments(cargs):
+        return exit_failure
+
     if cargs.stop_afl:
         return not stop_afl(cargs)
 
@@ -812,6 +815,30 @@ def which(prog):
                 return exe_file
     return None
 
+def check_requierments(cargs):
+    lcov = which( "lcov" );
+    gcov = which( "gcov" );
+    genhtml = which( "genhtml" );
+
+    if ( lcov == None ):
+        lcov = which( cargs.lcov_path )
+    if ( genhtml == None ):
+        genhtml = which ( cargs.genhtml_path )
+
+    if ( lcov == None or gcov == None or genhtml == None):
+        print "Required command not found :"
+    else:
+	return True
+
+    if ( lcov == None ):
+        print "[*] lcov command does not exist : %s" % (cargs.lcov_path)
+    if ( genhtml == None ):
+        print "[*] genhtml command does not exist : %s" % (cargs.lcov_path)
+    if ( gcov == None ):
+        print "[*] gcov command does not exist : %s" % (cargs.lcov_path)
+
+    return False
+
 def validate_args(cargs):
 
     if cargs.coverage_cmd:
@@ -864,14 +891,8 @@ def validate_args(cargs):
             % (cargs.afl_fuzzing_dir)
         return False
 
-    if not which(cargs.lcov_path):
-        print "[*] lcov command does not exist: %s" % (cargs.lcov_path)
-        return False
-
     if not cargs.disable_lcov_web and cargs.lcov_web_all:
-        if not which(cargs.genhtml_path):
-            print "[*] genhtml command does not exist: %s" % (cargs.genthml_path)
-            return False
+        return False
 
     return True
 
