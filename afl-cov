@@ -59,7 +59,7 @@ def main():
         print "afl-cov-" + __version__
         return exit_success
 
-    if not check_requierments(cargs):
+    if not check_requirements(cargs):
         return exit_failure
 
     if cargs.stop_afl:
@@ -815,7 +815,7 @@ def which(prog):
                 return exe_file
     return None
 
-def check_requierments(cargs):
+def check_requirements(cargs):
     lcov = which( "lcov" );
     gcov = which( "gcov" );
     genhtml = which( "genhtml" );
@@ -825,17 +825,20 @@ def check_requierments(cargs):
     if ( genhtml == None ):
         genhtml = which ( cargs.genhtml_path )
 
-    if ( lcov == None or gcov == None or genhtml == None):
+    if ( lcov == None or gcov == None):
         print "Required command not found :"
     else:
-	return True
+        if (genhtml == None and not cargs.disable_lcov_web):
+            print "Required command not found :"
+        else:
+            return True
 
     if ( lcov == None ):
         print "[*] lcov command does not exist : %s" % (cargs.lcov_path)
-    if ( genhtml == None ):
-        print "[*] genhtml command does not exist : %s" % (cargs.lcov_path)
+    if ( genhtml == None and not cargs.disable_lcov_web):
+        print "[*] genhtml command does not exist : %s" % (cargs.genhtml_path)
     if ( gcov == None ):
-        print "[*] gcov command does not exist : %s" % (cargs.lcov_path)
+        print "[*] gcov command does not exist : %s" % (cargs.gcov_path)
 
     return False
 
