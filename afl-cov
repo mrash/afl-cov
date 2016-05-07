@@ -245,7 +245,7 @@ def coverage_diff(cycle_num, fuzz_dir, cov_paths, afl_file, cov, cargs):
 
     log_lines         = []
     delta_log_lines   = []
-    print_diff_header = 1
+    print_diff_header = True
 
     cp = cov_paths['dirs'][fuzz_dir]
 
@@ -269,19 +269,19 @@ def coverage_diff(cycle_num, fuzz_dir, cov_paths, afl_file, cov, cargs):
     ### simply whether a new line or function has been executed by this
     ### test case. So, we look for new positive coverage.
     for f in new_cov['pos']:
-        print_filename = 1
+        print_filename = True
         if f not in cov['zero'] and f not in cov['pos']: ### completely new file
             cov_init(f, cov)
             if print_diff_header:
                 log_lines.append("diff %s/%s -> %s/%s" % \
                         (a_dir, a_file, b_dir, b_file))
-                print_diff_header = 0
+                print_diff_header = False
             for ctype in new_cov['pos'][f]:
                 for val in sorted(new_cov['pos'][f][ctype]):
                     cov['pos'][f][ctype][val] = ''
                     if print_filename:
                         log_lines.append("New src file: " + f)
-                        print_filename = 0
+                        print_filename = False
                     log_lines.append("  New '" + ctype + "' coverage: " + val)
                     if ctype == 'line':
                         if cargs.coverage_include_lines:
@@ -298,10 +298,10 @@ def coverage_diff(cycle_num, fuzz_dir, cov_paths, afl_file, cov, cargs):
                         if print_diff_header:
                             log_lines.append("diff %s/%s -> %s/%s" % \
                                     (a_dir, a_file, b_dir, b_file))
-                            print_diff_header = 0
+                            print_diff_header = False
                         if print_filename:
                             log_lines.append("Src file: " + f)
-                            print_filename = 0
+                            print_filename = False
                         log_lines.append("  New '" + ctype + "' coverage: " + val)
                         if ctype == 'line':
                             if cargs.coverage_include_lines:
@@ -922,13 +922,13 @@ def add_dir(fdir, cov_paths):
 
 def mkdirs(cov_paths, cargs):
 
-    create_cov_dirs = 0
+    create_cov_dirs = False
     if is_dir(cov_paths['top_dir']):
         if cargs.overwrite:
             rmtree(cov_paths['top_dir'])
-            create_cov_dirs = 1
+            create_cov_dirs = True
     else:
-        create_cov_dirs = 1
+        create_cov_dirs = True
 
     if create_cov_dirs:
         for k in ['top_dir', 'web_dir', 'lcov_dir', 'diff_dir']:
