@@ -855,7 +855,7 @@ def validate_args(cargs):
             if part[0] == ' ' or part[0] == '-':
                 continue
             if (which(part)):
-                return True
+                found_exec = True
         if not found_exec:
             print "[*] Could not find an executable binary in " \
                     "--coverage-cmd '%s'" % cargs.coverage_cmd
@@ -868,6 +868,18 @@ def validate_args(cargs):
     if cargs.code_dir:
         if not is_dir(cargs.code_dir):
             print "[*] --code-dir path does not exist"
+            return False
+
+        ### make sure the code has been compiled with code coverage support,
+        ### so *.gcno files should exist
+        found_code_coverage_support = False
+        for root, dirs, files in os.walk(cargs.code_dir):
+            for filename in files:
+                if filename[-5:] == '.gcno':
+                    found_code_coverage_support = True
+        if not found_code_coverage_support:
+            print "[*] Could not find any *.gcno files in --code-dir " \
+                    "'%s', is code coverage compiled in?" % cargs.code_dir
             return False
     else:
         if not cargs.func_search and not cargs.line_search:
