@@ -255,13 +255,13 @@ def coverage_diff(cycle_num, fuzz_dir, cov_paths, afl_file, cov, cargs):
     b_file = os.path.basename(afl_file)
     b_dir  = os.path.basename(fuzz_dir)
 
+    new_cov = extract_coverage(cp['lcov_info_final'], cargs)
+
     ### with the coverage from the previous lcov results extracted
     ### the previous time we went through this function, we remove
     ### associated files unless instructed to keep them
     if not cargs.preserve_all_lcov_files:
         rm_prev_cov_files(cp)
-
-    new_cov = extract_coverage(cp['lcov_info_final'], cargs)
 
     ### We aren't interested in the number of times AFL has executed
     ### a line or function (since we can't really get this anyway because
