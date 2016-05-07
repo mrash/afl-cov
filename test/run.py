@@ -55,7 +55,8 @@ def main():
     ### clone the fwknop repository since the test suite operates
     ### against fwknop code
     if not is_dir(fwknop_codecov_dir):
-        print "[+] (Code cov) cloning fwknop repo: %s" % (cargs.fwknop_git)
+        print "[+] (Code cov) Cloning fwknop repo: %s -> %s" % \
+                (cargs.fwknop_git, fwknop_codecov_dir)
         do_cmd("%s clone %s %s" % (cmds['git'],
             cargs.fwknop_git, fwknop_codecov_dir), None, cargs)
 
@@ -64,7 +65,8 @@ def main():
         return
 
     if not is_dir(fwknop_afl_dir):
-        print "[+] (AFL support) Cloning fwknop repo: %s" % (cargs.fwknop_git)
+        print "[+] (AFL support) Cloning fwknop repo: %s -> %s" % \
+                (cargs.fwknop_git, fwknop_afl_dir)
         do_cmd("%s clone %s %s" % (cmds['git'],
             fwknop_codecov_dir, fwknop_afl_dir), None, cargs)
 
