@@ -7,7 +7,7 @@
 #  Purpose: Perform lcov coverage diff's against each AFL queue file to see
 #           new functions and line coverage evolve from an AFL fuzzing cycle.
 #
-#  Copyright (C) 2015 Michael Rash (mbr@cipherdyne.org)
+#  Copyright (C) 2015-2016 Michael Rash (mbr@cipherdyne.org)
 #
 #  License (GNU General Public License):
 #
@@ -802,6 +802,19 @@ def init_tracking(cov_paths, cargs):
 def is_exe(fpath):
     return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
+def is_gcov_enabled(binary, cov_paths, cargs):
+
+    rv = False
+
+    ### run readelf against the binary to see if it contains gcov support
+    for line in run_cmd(cargs.readelf_path + " -a " + binary,
+            cov_paths, cargs, WANT_OUTPUT):
+        if ' __gcov' in line:
+            rv = True
+            break
+
+    return rv
+
 def which(prog):
     fpath, fname = os.path.split(prog)
     if fpath:
@@ -848,17 +861,33 @@ def validate_args(cargs):
         if 'AFL_FILE' not in cargs.coverage_cmd:
             print "[*] --coverage-cmd must contain AFL_FILE"
             return False
+
         ### make sure at least one component of the command is an
-        ### executable
+        ### executable and is compiled with code coverage support
         found_exec = False
+        found_code_cov_binary = False
+
         for part in cargs.coverage_cmd.split(' '):
             if part[0] == ' ' or part[0] == '-':
                 continue
             if (which(part)):
                 found_exec = True
+                if is_exe(cargs.readelf_path) and is_gcov_enabled(part,
+                        {'log_file':cargs.afl_fuzzing_dir + '/cov/afl-cov.log',
+                        'tmp_out':cargs.afl_fuzzing_dir + '/cov/cmd-out.tmp'},
+                        cargs):
+                    found_code_cov_binary = True
+                break
+
         if not found_exec:
-            print "[*] Could not find an executable binary in " \
+            print "[*] Could not find an executable binary " \
                     "--coverage-cmd '%s'" % cargs.coverage_cmd
+            return False
+
+        if is_exe(cargs.readelf_path) and not found_code_cov_binary:
+            print "[*] Could not find an executable binary with code " \
+                    "coverage support ('-fprofile-arcs -ftest-coverage') " \
+                    "in --coverage-cmd '%s'" % cargs.coverage_cmd
             return False
     else:
         if not cargs.func_search and not cargs.line_search:
@@ -879,7 +908,8 @@ def validate_args(cargs):
                     found_code_coverage_support = True
         if not found_code_coverage_support:
             print "[*] Could not find any *.gcno files in --code-dir " \
-                    "'%s', is code coverage compiled in?" % cargs.code_dir
+                    "'%s', is code coverage ('-fprofile-arcs -ftest-coverage') " \
+                    "compiled in?" % cargs.code_dir
             return False
     else:
         if not cargs.func_search and not cargs.line_search:
@@ -1086,6 +1116,8 @@ def parse_cmdline():
             help="Path to lcov command", default="/usr/bin/lcov")
     p.add_argument("--genhtml-path", type=str,
             help="Path to genhtml command", default="/usr/bin/genhtml")
+    p.add_argument("--readelf-path", type=str,
+            help="Path to readelf command", default="/usr/bin/readelf")
     p.add_argument("--stop-afl", action='store_true',
             help="Stop all running afl-fuzz instances associated with --afl-fuzzing-dir <dir>",
             default=False)
