@@ -381,7 +381,7 @@ def write_cov(cpath, cov, cargs):
 
 def rm_prev_cov_files(ct):
     for cname in ['prev_lcov_base', 'prev_lcov_info',
-            'prev_lcov_info_tmp', 'prev_lcov_info_final']:
+            'prev_lcov_info_final']:
         if cname in ct and os.path.exists(ct[cname]):
             os.remove(ct[cname])
     return
@@ -547,18 +547,21 @@ def gen_coverage(fuzz_dir, cov_paths, cargs):
                 + " --output-file " + cp['lcov_info_final'], \
                 cov_paths['log_file'], cargs, WANT_OUTPUT)
     else:
+        tmp_file = NamedTemporaryFile(delete=False)
         run_cmd(cargs.lcov_path \
                 + lcov_opts
                 + " --no-checksum -a " + cp['lcov_base'] \
                 + " -a " + cp['lcov_info'] \
-                + " --output-file " + cp['lcov_info_tmp'], \
+                + " --output-file " + tmp_file.name, \
                 cov_paths['log_file'], cargs, NO_OUTPUT)
         out_lines = run_cmd(cargs.lcov_path \
                 + lcov_opts
-                + " --no-checksum -r " + cp['lcov_info_tmp'] \
+                + " --no-checksum -r " + tmp_file.name \
                 + " " + cargs.lcov_exclude_pattern + "  --output-file " \
                 + cp['lcov_info_final'],
                 cov_paths['log_file'], cargs, WANT_OUTPUT)
+        if os.path.exists(tmp_file.name):
+            os.unlink(tmp_file.name)
 
     for line in out_lines:
         m = re.search('^\s+(lines\.\..*\:\s.*)', line)
@@ -679,9 +682,6 @@ def gen_paths(fuzz_dir, cov_paths, afl_file, cargs):
     cp['lcov_info'] = cov_paths['lcov_dir'] + \
             '/' + basedir + '/' + basename + '.lcov_info'
 
-    cp['lcov_info_tmp'] = cov_paths['lcov_dir'] + '/' \
-            + basedir + '/' + basename + '.lcov_info_tmp'
-
     cp['lcov_info_final'] = cov_paths['lcov_dir'] + '/' \
             + basedir + '/' + basename + '.lcov_info_final'
 
@@ -692,9 +692,6 @@ def gen_paths(fuzz_dir, cov_paths, afl_file, cargs):
         cp['prev_lcov_info'] = cov_paths['lcov_dir'] + '/' \
                 + basedir + '/' + os.path.basename(cp['prev_file']) \
                 + '.lcov_info'
-        cp['prev_lcov_info_tmp'] = cov_paths['lcov_dir'] + '/' \
-                + basedir + '/' + os.path.basename(cp['prev_file']) \
-                + '.lcov_info_tmp'
         cp['prev_lcov_info_final'] = cov_paths['lcov_dir'] + \
                 '/' + basedir + '/' + os.path.basename(cp['prev_file']) \
                 + '.lcov_info_final'
