@@ -66,7 +66,7 @@ def main():
 
     if not is_dir(fwknop_afl_dir):
         print "[+] (AFL support) Cloning fwknop repo: %s -> %s" % \
-                (cargs.fwknop_git, fwknop_afl_dir)
+                (fwknop_codecov_dir, fwknop_afl_dir)
         do_cmd("%s clone %s %s" % (cmds['git'],
             fwknop_codecov_dir, fwknop_afl_dir), None, cargs)
 
