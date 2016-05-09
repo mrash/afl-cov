@@ -767,7 +767,6 @@ def init_tracking(cov_paths, cargs):
     cov_paths['lcov_dir'] = cov_paths['top_dir'] + '/lcov'
     cov_paths['diff_dir'] = cov_paths['top_dir'] + '/diff'
     cov_paths['log_file'] = cov_paths['top_dir'] + '/afl-cov.log'
-    cov_paths['tmp_out']  = cov_paths['top_dir'] + '/cmd-out.tmp'
 
     ### global coverage results
     cov_paths['id_delta_cov'] = cov_paths['top_dir'] + '/id-delta-cov'
