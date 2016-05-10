@@ -1,4 +1,14 @@
 afl-cov-0.6 (05//2016):
+    - (Markus Teufelberger) Add --cover-corpus argument so that code coverage
+      is measured only after all new AFL test cases are executed. The main
+      advantage is that code coverage results are produced more quickly in
+      this mode since AFL can generate test cases - at least initially - much
+      faster than code coverage can be calculated for each test case. The
+      trade off in this mode is that code coverage stats are not tracked per
+      AFL test case, but rather across all new test cases essentially as a
+      unified set.
+    - Use the tempfile module for temporary files (suggested by Markus
+      Teufelberger in issue #19).
 
 afl-cov-0.5 (01/11/2016):
     - For --live mode operations, add the same core pattern detection logic to
