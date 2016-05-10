@@ -140,12 +140,10 @@ def process_afl_test_cases(cargs):
 
             def_dir = cargs.afl_fuzzing_dir + '/cov'
 
-            if not is_dir(def_dir + '/diff'):
-                os.mkdir(def_dir + '/diff')
-            if not is_dir(def_dir + '/lcov'):
-                os.mkdir(def_dir + '/lcov')
-            if not is_dir(def_dir + '/web'):
-                os.mkdir(def_dir + '/web')
+            for ext in ['diff', 'lcov', 'web']:
+                checkdir = "%s/%s" % (def_dir, ext)
+                if not is_dir(checkdir):
+                    os.mkdir(checkdir)
 
             # run initial command
             lcov_opts = ''
@@ -195,34 +193,24 @@ def process_afl_test_cases(cargs):
                                     " --output-file " + def_dir + '/lcov/tracefile.lcov_info_final',
                                     cov_paths, cargs, WANT_OUTPUT)[1]
             else:
+                tmp_file = NamedTemporaryFile(delete=False)
                 run_cmd(cargs.lcov_path +
                         lcov_opts +
                         " --no-checksum -a " + def_dir + '/lcov/tracefile.lcov_base' +
                         " -a " + def_dir + '/lcov/tracefile.lcov_info' +
-                        " --output-file " + def_dir + '/lcov/tracefile.lcov_info_tmp',
+                        " --output-file " + tmp_file.name,
                         cov_paths, cargs, LOG_ERRORS)
 
                 out_lines = run_cmd(cargs.lcov_path +
                                     lcov_opts +
-                                    " --no-checksum -r " + def_dir + '/lcov/tracefile.lcov_info_tmp' +
+                                    " --no-checksum -r " + tmp_file.name +
                                     " " + cargs.lcov_exclude_pattern + "  --output-file " +
                                     def_dir + '/lcov/tracefile.lcov_info_final',
                                     cov_paths, cargs, WANT_OUTPUT)[1]
+                if os.path.exists(tmp_file.name):
+                    os.unlink(tmp_file.name)
 
-            for line in out_lines:
-                m = re.search('^\s+(lines\.\..*\:\s.*)', line)
-                if m and m.group(1):
-                    logr("    " + m.group(1), cov_paths['log_file'], cargs)
-                else:
-                    m = re.search('^\s+(functions\.\..*\:\s.*)', line)
-                    if m and m.group(1):
-                        logr("    " + m.group(1), cov_paths['log_file'], cargs)
-                    else:
-                        if cargs.enable_branch_coverage:
-                            m = re.search('^\s+(branches\.\..*\:\s.*)', line)
-                            if m and m.group(1):
-                                logr("    " + m.group(1),
-                                     cov_paths['log_file'], cargs)
+            log_coverage(out_lines, cov_paths['log_file'], cargs)
 
             # generate report
             web_link = def_dir + '/web/index.html'
@@ -683,20 +671,25 @@ def gen_coverage(fuzz_dir, cov_paths, cargs):
         if os.path.exists(tmp_file.name):
             os.unlink(tmp_file.name)
 
+    log_coverage(out_lines, cov_paths['log_file'], cargs)
+
+    return
+
+def log_coverage(out_lines, log_file, cargs):
     for line in out_lines:
         m = re.search('^\s+(lines\.\..*\:\s.*)', line)
         if m and m.group(1):
-            logr("    " + m.group(1), cov_paths['log_file'], cargs)
+            logr("    " + m.group(1), log_file, cargs)
         else:
             m = re.search('^\s+(functions\.\..*\:\s.*)', line)
             if m and m.group(1):
-                logr("    " + m.group(1), cov_paths['log_file'], cargs)
+                logr("    " + m.group(1), log_file, cargs)
             else:
                 if cargs.enable_branch_coverage:
                     m = re.search('^\s+(branches\.\..*\:\s.*)', line)
                     if m and m.group(1):
                         logr("    " + m.group(1),
-                                cov_paths['log_file'], cargs)
+                                log_file, cargs)
     return
 
 def gen_web_cov_report(fuzz_dir, cov_paths, cargs):
