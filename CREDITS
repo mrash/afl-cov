@@ -2,3 +2,10 @@
 Michal Zalewski
     - Made the original suggestion of sending afl-fuzz test cases back through
       a project with gcov profiling support built-in.
+
+Markus Teufelberger
+    - Submitted a patch to add --cover-corpus argument so that code coverage
+      is measured only after all new AFL test cases are executed. The main
+      advantage is that code coverage results are produced more quickly in
+      this mode since AFL can generate test cases - at least initially - much
+      faster than code coverage can be calculated for each test case.
