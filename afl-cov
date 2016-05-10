@@ -67,8 +67,11 @@ def main():
     if cargs.stop_afl:
         return not stop_afl(cargs)
 
-    if not validate_args(cargs):
+    if not validate_cargs(cargs):
         return exit_failure
+
+    if cargs.validate_args:
+        return exit_success
 
     if cargs.func_search or cargs.line_search:
         return not search_cov(cargs)
@@ -175,6 +178,9 @@ def process_afl_test_cases(cargs):
                         out_lines = run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
                                 cov_paths['log_file'], cargs, WANT_OUTPUT)[1]
                         run_once = True
+
+                tot_files += 1
+
             # capture coverage
             run_cmd(cargs.lcov_path +
                     lcov_opts +
@@ -932,6 +938,8 @@ def is_gcov_enabled(binary, cargs):
     for line in run_cmd("%s -a %s" % (cargs.readelf_path, binary),
             False, cargs, WANT_OUTPUT)[1]:
         if ' __gcov' in line:
+            if cargs.validate_args:
+                print "    Binary '%s' is compiled with code coverage support." % binary
             rv = True
             break
 
@@ -977,7 +985,7 @@ def check_requirements(cargs):
 
     return False
 
-def validate_args(cargs):
+def validate_cargs(cargs):
 
     if cargs.coverage_cmd:
         if 'AFL_FILE' not in cargs.coverage_cmd:
@@ -1245,6 +1253,8 @@ def parse_cmdline():
     p.add_argument("--stop-afl", action='store_true',
             help="Stop all running afl-fuzz instances associated with --afl-fuzzing-dir <dir>",
             default=False)
+    p.add_argument("--validate-args", action='store_true',
+            help="Validate args and exit", default=False)
     p.add_argument("-v", "--verbose", action='store_true',
             help="Verbose mode", default=False)
     p.add_argument("-V", "--version", action='store_true',
