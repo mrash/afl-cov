@@ -159,7 +159,7 @@ def process_afl_test_cases(cargs):
                     " --directory " + cargs.code_dir +
                     " --output-file " +
                     def_dir + '/lcov/tracefile.lcov_base',
-                    cov_paths, cargs, LOG_ERRORS)
+                    cov_paths['log_file'], cargs, LOG_ERRORS)
 
             # run all afl_files
             for index, f in enumerate(afl_files):
@@ -188,7 +188,7 @@ def process_afl_test_cases(cargs):
                     cargs.code_dir +
                     " --output-file " +
                     def_dir + '/lcov/tracefile.lcov_info',
-                    cov_paths, cargs, LOG_ERRORS)
+                    cov_paths['log_file'], cargs, LOG_ERRORS)
 
             # merge base and info (and exclude, if needed)
             if cargs.disable_lcov_exclude_pattern:
@@ -197,7 +197,7 @@ def process_afl_test_cases(cargs):
                                     " --no-checksum -a " + def_dir + '/lcov/tracefile.lcov_base' +
                                     " -a " + def_dir + '/lcov/tracefile.lcov_info' +
                                     " --output-file " + def_dir + '/lcov/tracefile.lcov_info_final',
-                                    cov_paths, cargs, WANT_OUTPUT)[1]
+                                    cov_paths['log_file'], cargs, WANT_OUTPUT)[1]
             else:
                 tmp_file = NamedTemporaryFile(delete=False)
                 run_cmd(cargs.lcov_path +
@@ -205,14 +205,14 @@ def process_afl_test_cases(cargs):
                         " --no-checksum -a " + def_dir + '/lcov/tracefile.lcov_base' +
                         " -a " + def_dir + '/lcov/tracefile.lcov_info' +
                         " --output-file " + tmp_file.name,
-                        cov_paths, cargs, LOG_ERRORS)
+                        cov_paths['log_file'], cargs, LOG_ERRORS)
 
                 out_lines = run_cmd(cargs.lcov_path +
                                     lcov_opts +
                                     " --no-checksum -r " + tmp_file.name +
                                     " " + cargs.lcov_exclude_pattern + "  --output-file " +
                                     def_dir + '/lcov/tracefile.lcov_info_final',
-                                    cov_paths, cargs, WANT_OUTPUT)[1]
+                                    cov_paths['log_file'], cargs, WANT_OUTPUT)[1]
                 if os.path.exists(tmp_file.name):
                     os.unlink(tmp_file.name)
 
@@ -229,7 +229,7 @@ def process_afl_test_cases(cargs):
                     ' --output-directory ' +
                     def_dir + '/web ' +
                     def_dir + '/lcov/tracefile.lcov_info_final',
-                    cov_paths, cargs, LOG_ERRORS)
+                    cov_paths['log_file'], cargs, LOG_ERRORS)
 
             logr("[+] Final lcov web report: %s" % web_link,
                  cov_paths['log_file'], cargs)
@@ -276,10 +276,10 @@ def process_afl_test_cases(cargs):
                         ### for the current AFL test case file
                         if run_once:
                             run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
-                                    cov_paths, cargs, NO_OUTPUT)
+                                    cov_paths['log_file'], cargs, NO_OUTPUT)
                         else:
                             out_lines = run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
-                                    cov_paths, cargs, WANT_OUTPUT)[1]
+                                    cov_paths['log_file'], cargs, WANT_OUTPUT)[1]
                             run_once = True
 
                         ### generate the code coverage stats for this test case
