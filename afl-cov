@@ -165,16 +165,15 @@ def process_afl_test_cases(cargs):
                         (os.path.basename(f), index + 1, len(afl_files),
                         curr_cycle), cov_paths['log_file'], cargs)
 
-                if cargs.coverage_cmd:
-                    # execute the command to generate code coverage stats
-                    # for the current AFL test case file
-                    if run_once:
-                        run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
-                                cov_paths['log_file'], cargs, NO_OUTPUT)
-                    else:
-                        out_lines = run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
-                                cov_paths['log_file'], cargs, WANT_OUTPUT)[1]
-                        run_once = True
+                # execute the command to generate code coverage stats
+                # for the current AFL test case file
+                if run_once:
+                    run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
+                            cov_paths['log_file'], cargs, NO_OUTPUT)
+                else:
+                    out_lines = run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
+                            cov_paths['log_file'], cargs, WANT_OUTPUT)[1]
+                    run_once = True
 
                 tot_files += 1
 
@@ -267,39 +266,37 @@ def process_afl_test_cases(cargs):
                         cov_paths['dirs'][fuzz_dir]['prev_lcov_info'] = curr_lcov_info
                         cov_paths['dirs'][fuzz_dir]['prev_lcov_info_final'] = curr_lcov_info_final
 
-                    if cargs.coverage_cmd:
+                    ### execute the command to generate code coverage stats
+                    ### for the current AFL test case file
+                    if run_once:
+                        run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
+                                cov_paths['log_file'], cargs, NO_OUTPUT)
+                    else:
+                        out_lines = run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
+                                cov_paths['log_file'], cargs, WANT_OUTPUT)[1]
+                        run_once = True
 
-                        ### execute the command to generate code coverage stats
-                        ### for the current AFL test case file
-                        if run_once:
-                            run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
-                                    cov_paths['log_file'], cargs, NO_OUTPUT)
-                        else:
-                            out_lines = run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
-                                    cov_paths['log_file'], cargs, WANT_OUTPUT)[1]
-                            run_once = True
+                    ### generate the code coverage stats for this test case
+                    gen_coverage(fuzz_dir, cov_paths, cargs)
 
-                        ### generate the code coverage stats for this test case
-                        gen_coverage(fuzz_dir, cov_paths, cargs)
+                    ### diff to the previous code coverage, look for new
+                    ### lines/functions, and write out results
+                    if cov_paths['dirs'][fuzz_dir]['prev_file']:
+                        coverage_diff(curr_cycle, fuzz_dir, cov_paths,
+                                f, cov, cargs)
 
-                        ### diff to the previous code coverage, look for new
-                        ### lines/functions, and write out results
-                        if cov_paths['dirs'][fuzz_dir]['prev_file']:
-                            coverage_diff(curr_cycle, fuzz_dir, cov_paths,
-                                    f, cov, cargs)
+                    if not cargs.disable_lcov_web and cargs.lcov_web_all:
+                        gen_web_cov_report(fuzz_dir, cov_paths, cargs)
 
-                        if not cargs.disable_lcov_web and cargs.lcov_web_all:
-                            gen_web_cov_report(fuzz_dir, cov_paths, cargs)
-
-                        ### log the output of the very first coverage command to
-                        ### assist in troubleshooting
-                        if len(out_lines):
-                            logr("\n\n++++++ BEGIN - first exec output for CMD: %s" % \
-                                    (cargs.coverage_cmd.replace('AFL_FILE', f)),
-                                    cov_paths['log_file'], cargs)
-                            for line in out_lines:
-                                logr("    %s" % (line), cov_paths['log_file'], cargs)
-                            logr("++++++ END\n", cov_paths['log_file'], cargs)
+                    ### log the output of the very first coverage command to
+                    ### assist in troubleshooting
+                    if len(out_lines):
+                        logr("\n\n++++++ BEGIN - first exec output for CMD: %s" % \
+                                (cargs.coverage_cmd.replace('AFL_FILE', f)),
+                                cov_paths['log_file'], cargs)
+                        for line in out_lines:
+                            logr("    %s" % (line), cov_paths['log_file'], cargs)
+                        logr("++++++ END\n", cov_paths['log_file'], cargs)
 
                     if dir_ctr == 1:
                         curr_file      = f
