@@ -136,17 +136,13 @@ def process_afl_test_cases(cargs):
                         afl_files.append(f)
                         new_files.append(f)  # needed below to check if sleep is necessary
 
-            # set up directories
-            if not cargs.afl_fuzzing_dir:
-                print "[*] Must specify AFL fuzzing dir with --afl-fuzzing-dir or -d"
-                return False
+            if new_files:
+                gen_paths(fuzz_dir, cov_paths, new_files[0], cargs)
+            else:
+                rv = False
+                break
 
             def_dir = cargs.afl_fuzzing_dir + '/cov'
-
-            for ext in ['diff', 'lcov', 'web']:
-                checkdir = "%s/%s" % (def_dir, ext)
-                if not is_dir(checkdir):
-                    os.mkdir(checkdir)
 
             # run initial command
             lcov_opts = ''
@@ -165,8 +161,9 @@ def process_afl_test_cases(cargs):
             for index, f in enumerate(afl_files):
                 curr_cycle = get_cycle_num(index, cargs)
 
-                logr("[+] AFL test case: %s (%d / %d), cycle: %d" % (os.path.basename(f), index + 1, len(afl_files),
-                                                                     curr_cycle), cov_paths['log_file'], cargs)
+                logr("[+] AFL test case: %s (%d / %d), cycle: %d" % \
+                        (os.path.basename(f), index + 1, len(afl_files),
+                        curr_cycle), cov_paths['log_file'], cargs)
 
                 if cargs.coverage_cmd:
                     # execute the command to generate code coverage stats
@@ -333,6 +330,7 @@ def process_afl_test_cases(cargs):
                 logr("[+] afl-fuzz appears to be stopped...",
                         cov_paths['log_file'], cargs)
                 break
+        ### only go once through the loop unless we are in --live mode
         else:
             break
 
