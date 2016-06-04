@@ -70,11 +70,12 @@ def main():
         do_cmd("%s clone %s %s" % (cmds['git'],
             fwknop_codecov_dir, fwknop_afl_dir), None, cargs)
 
-    ### build both fwknop repositories under the specified commit
-    build_fwknop(fwknop_codecov_dir, fwknop_commit,
-            fwknop_codecov_compile, cmds, cargs)
-    build_fwknop(fwknop_afl_dir, fwknop_commit,
-            fwknop_afl_compile, cmds, cargs)
+    if not cargs.skip_compile:
+        ### build both fwknop repositories under the specified commit
+        build_fwknop(fwknop_codecov_dir, fwknop_commit,
+                fwknop_codecov_compile, cmds, cargs)
+        build_fwknop(fwknop_afl_dir, fwknop_commit,
+                fwknop_afl_compile, cmds, cargs)
 
     ### run the actual tests
     print "[+] Running afl-cov tests (ignore 'Terminated' messages)..."
@@ -136,6 +137,9 @@ def parse_cmdline():
             default="https://github.com/mrash/fwknop.git")
     p.add_argument("--ignore-core-pattern", action='store_true',
             help="Ignore the /proc/sys/kernel/core_pattern setting in --live mode",
+            default=False)
+    p.add_argument("--skip-compile", action='store_true',
+            help="Skip fwknop compilation (assumes it was already done from a previous run)",
             default=False)
     p.add_argument("-v", "--verbose", action='store_true',
             help="Verbose mode", default=False)
