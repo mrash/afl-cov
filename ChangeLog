@@ -1,4 +1,4 @@
-afl-cov-0.6 (05//2016):
+afl-cov-0.6 (06/05/2016):
     - (Markus Teufelberger) Add --cover-corpus argument so that code coverage
       is measured only after all new AFL test cases are executed. The main
       advantage is that code coverage results are produced more quickly in
@@ -8,8 +8,13 @@ afl-cov-0.6 (05//2016):
       AFL test case, but rather across all new test cases essentially as a
       unified set. In --live mode, --cover-corpus causes coverage to be
       calculated once per sleep cycle after all test cases have been executed.
-      In --coverage-at-exit mode, coverage calculation will be reserved to
-      just before afl-cov exits.
+      In --coverage-at-exit mode, only a single coverage calculation will be
+      performed just before afl-cov exits.
+    - In either --cover-corpus or --coverage-at-exit modes, the
+      cov/id-delta-cov file will contain AFL test case ID ranges for where
+      coverage is hit. This is necessary because these modes cause afl-cov to
+      execute a series of AFL test cases (instead of each individual test
+      case one at a time) before coverage is calculated.
     - Add a prerequisite test to make sure the targeted binary is compiled
       with code coverage support ('-fprofile-arcs -ftest-coverage').
     - Use the tempfile module for temporary files (suggested by Markus
