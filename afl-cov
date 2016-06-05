@@ -104,11 +104,10 @@ def process_afl_test_cases(cargs):
     run_once  = False
     tot_files = 0
     fuzz_dir  = ''
+    curr_file = ''
 
     afl_files = []
     cov_paths = {}
-
-    curr_file      = ''
 
     ### main coverage tracking dictionary
     cov         = {}
@@ -121,7 +120,8 @@ def process_afl_test_cases(cargs):
             rv = False
             break
 
-        dir_ctr = 0
+        dir_ctr  = 0
+        last_dir = False
 
         do_coverage = True
         if cargs.cover_corpus:
@@ -129,13 +129,16 @@ def process_afl_test_cases(cargs):
 
         for fuzz_dir in cov_paths['dirs']:
 
+            do_break  = False
+            last_file = False
             num_files = 0
             new_files = []
             tmp_files = import_test_cases(fuzz_dir + '/queue')
             dir_ctr  += 1
+            f_ctr     = 0
 
-            if cargs.cover_corpus and dir_ctr == len(cov_paths):
-                do_coverage = True
+            if dir_ctr == len(cov_paths['dirs']):
+                last_dir = True
 
             for f in tmp_files:
                 if f not in afl_files:
@@ -148,6 +151,15 @@ def process_afl_test_cases(cargs):
                         cov_paths['log_file'], cargs)
 
             for f in new_files:
+
+                f_ctr += 1
+                if f_ctr == len(new_files):
+                    last_file = True
+
+                if cargs.cover_corpus and last_dir and last_file:
+                    ### in --cover-corpus mode, only run lcov after all AFL
+                    ### test cases have been processed
+                    do_coverage = True
 
                 out_lines = []
                 curr_cycle = get_cycle_num(num_files, cargs)
@@ -169,16 +181,25 @@ def process_afl_test_cases(cargs):
                             cov_paths['log_file'], cargs, WANT_OUTPUT)[1]
                     run_once = True
 
-                if do_coverage:
+                if cargs.afl_queue_id_limit \
+                        and num_files >= cargs.afl_queue_id_limit - 1:
+                    logr("[+] queue/ id limit of %d reached..." \
+                            % cargs.afl_queue_id_limit,
+                            cov_paths['log_file'], cargs)
+                    do_break = True
+                    if cargs.cover_corpus and last_dir:
+                        do_coverage = True
+
+                if do_coverage and not cargs.coverage_at_exit:
                     ### generate the code coverage stats for this test case
-                    gen_coverage(cov_paths, cargs)
+                    lcov_gen_coverage(cov_paths, cargs)
 
                     ### diff to the previous code coverage, look for new
                     ### lines/functions, and write out results
                     coverage_diff(curr_cycle, fuzz_dir, cov_paths, f,
                             cov, cargs)
 
-                    if not cargs.disable_lcov_web and cargs.lcov_web_all:
+                    if cargs.lcov_web_all:
                         gen_web_cov_report(fuzz_dir, cov_paths, cargs)
 
                     ### log the output of the very first coverage command to
@@ -196,11 +217,7 @@ def process_afl_test_cases(cargs):
                 num_files += 1
                 tot_files += 1
 
-                if cargs.afl_queue_id_limit \
-                        and num_files > cargs.afl_queue_id_limit:
-                    logr("[+] queue/ id limit of %d reached..." \
-                            % cargs.afl_queue_id_limit,
-                            cov_paths['log_file'], cargs)
+                if do_break:
                     break
 
         if cargs.live:
@@ -223,12 +240,21 @@ def process_afl_test_cases(cargs):
                 % (tot_files, len(afl_files)),
                 cov_paths['log_file'], cargs)
 
+        if cargs.coverage_at_exit:
+            ### generate the code coverage stats for this test case
+            lcov_gen_coverage(cov_paths, cargs)
+
+            ### diff to the previous code coverage, look for new
+            ### lines/functions, and write out results
+            coverage_diff(curr_cycle, fuzz_dir, cov_paths,
+                    cov_paths['id_file'], cov, cargs)
+
         ### write out the final zero coverage and positive coverage reports
         write_zero_cov(cov['zero'], cov_paths, cargs)
         write_pos_cov(cov['pos'], cov_paths, cargs)
 
         if not cargs.disable_lcov_web:
-            gen_coverage(cov_paths, cargs)
+            lcov_gen_coverage(cov_paths, cargs)
             gen_web_cov_report(fuzz_dir, cov_paths, cargs)
 
     else:
@@ -496,7 +522,7 @@ def get_cycle_num(id_num, cargs):
 
     return cycle_num
 
-def gen_coverage(cov_paths, cargs):
+def lcov_gen_coverage(cov_paths, cargs):
 
     out_lines = []
 
@@ -1029,7 +1055,9 @@ def parse_cmdline():
             default=False)
     p.add_argument("--cover-corpus", action='store_true',
             help="Measure coverage after running all available tests instead of individually per queue file",
-            # TODO: Document that queue limit should/will be ignored!
+            default=False)
+    p.add_argument("--coverage-at-exit", action='store_true',
+            help="Only calculate coverage just before afl-cov exit.",
             default=False)
     p.add_argument("--sleep", type=int,
             help="In --live mode, # of seconds to sleep between checking for new queue files",

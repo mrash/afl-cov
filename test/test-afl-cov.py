@@ -206,7 +206,13 @@ class TestAflCov(unittest.TestCase):
         out_str = ''.join(self.do_cmd("%s --afl-queue-id-limit 5 --overwrite" \
                         % (self.single_generator)))
         self.assertTrue('Final lcov web report' in out_str
-                and "New 'line' coverage: 1571" in out_str)
+                and "New 'line' coverage: 1585" in out_str)
+
+    def test_queue_limit_5_cover_corpus(self):
+        out_str = ''.join(self.do_cmd("%s --afl-queue-id-limit 5 --overwrite --cover-corpus" \
+                        % (self.single_generator)))
+        self.assertTrue('Final lcov web report' in out_str
+                and "New 'line' coverage: 1585" in out_str)
 
     def test_overwrite_dir(self):
         ### generate coverage, and then try to regenerate without --overwrite
@@ -221,7 +227,15 @@ class TestAflCov(unittest.TestCase):
         out_str = ''.join(self.do_cmd("%s --afl-queue-id-limit 5 --overwrite" \
                         % (self.parallel_generator)))
         self.assertTrue('Final lcov web report' in out_str
-                and "New 'line' coverage: 1571" in out_str
+                and "New 'line' coverage: 977" in out_str
+                and "Imported 145 new test cases" in out_str
+                and "Imported 212 new test cases" in out_str)
+
+    def test_queue_limit_5_parallel_cover_corpus(self):
+        out_str = ''.join(self.do_cmd("%s --afl-queue-id-limit 5 --overwrite --cover-corpus" \
+                        % (self.parallel_generator)))
+        self.assertTrue('Final lcov web report' in out_str
+                and "New 'line' coverage: 977" in out_str
                 and "Imported 145 new test cases" in out_str
                 and "Imported 212 new test cases" in out_str)
 

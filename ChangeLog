@@ -6,7 +6,12 @@ afl-cov-0.6 (05//2016):
       faster than code coverage can be calculated for each test case. The
       trade off in this mode is that code coverage stats are not tracked per
       AFL test case, but rather across all new test cases essentially as a
-      unified set.
+      unified set. In --live mode, --cover-corpus causes coverage to be
+      calculated once per sleep cycle after all test cases have been executed.
+      In --coverage-at-exit mode, coverage calculation will be reserved to
+      just before afl-cov exits.
+    - Add a prerequisite test to make sure the targeted binary is compiled
+      with code coverage support ('-fprofile-arcs -ftest-coverage').
     - Use the tempfile module for temporary files (suggested by Markus
       Teufelberger in issue #19).
 
