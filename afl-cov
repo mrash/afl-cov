@@ -170,6 +170,7 @@ def process_afl_test_cases(cargs):
 
                 cov_paths['diff'] = "%s/%s" % \
                         (cov_paths['diff_dir'], os.path.basename(f))
+                id_range_update(f, cov_paths)
 
                 ### execute the command to generate code coverage stats
                 ### for the current AFL test case file
@@ -191,6 +192,7 @@ def process_afl_test_cases(cargs):
                         do_coverage = True
 
                 if do_coverage and not cargs.coverage_at_exit:
+
                     ### generate the code coverage stats for this test case
                     lcov_gen_coverage(cov_paths, cargs)
 
@@ -198,6 +200,10 @@ def process_afl_test_cases(cargs):
                     ### lines/functions, and write out results
                     coverage_diff(curr_cycle, fuzz_dir, cov_paths, f,
                             cov, cargs)
+
+                    if cargs.cover_corpus:
+                        ### reset the range values
+                        cov_paths['id_min'] = cov_paths['id_max'] = -1
 
                     if cargs.lcov_web_all:
                         gen_web_cov_report(fuzz_dir, cov_paths, cargs)
@@ -265,16 +271,39 @@ def process_afl_test_cases(cargs):
 
     return rv
 
+def id_range_update(afl_file, cov_paths):
+
+    id_val = int(os.path.basename(afl_file).split(',')[0].split(':')[1])
+
+    if cov_paths['id_min'] == -1:
+        cov_paths['id_min'] = id_val
+    elif id_val < cov_paths['id_min']:
+        cov_paths['id_min'] = id_val
+
+    if cov_paths['id_max'] == -1:
+        cov_paths['id_max'] = id_val
+    elif id_val > cov_paths['id_max']:
+        cov_paths['id_max'] = id_val
+
+    return
+
 def coverage_diff(cycle_num, fuzz_dir, cov_paths, afl_file, cov, cargs):
 
     log_lines         = []
     delta_log_lines   = []
     print_diff_header = True
 
+    ### defaults
     a_file = '(init)'
     if cov_paths['id_file']:
         a_file = cov_paths['id_file']
-    b_file = os.path.basename(afl_file)
+    delta_file = b_file = os.path.basename(afl_file)
+
+    if cargs.cover_corpus or cargs.coverage_at_exit:
+        a_file = 'id:%d...' % cov_paths['id_min']
+        b_file = 'id:%d...' % cov_paths['id_max']
+        delta_file = 'id:[%d-%d]...' % \
+                (cov_paths['id_min'], cov_paths['id_max'])
 
     new_cov = extract_coverage(cov_paths['lcov_info_final'], cargs)
 
@@ -301,10 +330,10 @@ def coverage_diff(cycle_num, fuzz_dir, cov_paths, afl_file, cov, cargs):
                     if ctype == 'line':
                         if cargs.coverage_include_lines:
                             delta_log_lines.append("%s, %s, %s, %s, %s\n" \
-                                    % (b_file, cycle_num, f, ctype, val))
+                                    % (delta_file, cycle_num, f, ctype, val))
                     else:
                         delta_log_lines.append("%s, %s, %s, %s, %s\n" \
-                                % (b_file, cycle_num, f, ctype, val))
+                                % (delta_file, cycle_num, f, ctype, val))
         elif f in cov['zero'] and f in cov['pos']:
             for ctype in new_cov['pos'][f]:
                 for val in sorted(new_cov['pos'][f][ctype]):
@@ -321,11 +350,11 @@ def coverage_diff(cycle_num, fuzz_dir, cov_paths, afl_file, cov, cargs):
                         if ctype == 'line':
                             if cargs.coverage_include_lines:
                                 delta_log_lines.append("%s, %s, %s, %s, %s\n" \
-                                        % (b_file, cycle_num, f, \
+                                        % (delta_file, cycle_num, f, \
                                         ctype, val))
                         else:
                             delta_log_lines.append("%s, %s, %s, %s, %s\n" \
-                                    % (b_file, cycle_num, f, \
+                                    % (delta_file, cycle_num, f, \
                                     ctype, val))
 
     ### now that new positive coverage has been added, reset zero
@@ -724,8 +753,10 @@ def init_tracking(cov_paths, cargs):
     cov_paths['id_delta_cov'] = "%s/id-delta-cov" % cov_paths['top_dir']
     cov_paths['zero_cov']     = "%s/zero-cov" % cov_paths['top_dir']
     cov_paths['pos_cov']      = "%s/pos-cov"  % cov_paths['top_dir']
-    cov_paths['id_file']      = ''
     cov_paths['diff']         = ''
+    cov_paths['id_file']      = ''
+    cov_paths['id_min']       = -1  ### used in --cover-corpus mode
+    cov_paths['id_max']       = -1  ### used in --cover-corpus mode
 
     ### raw lcov files
     cov_paths['lcov_base']       = "%s/trace.lcov_base" % cov_paths['lcov_dir']
@@ -949,7 +980,10 @@ def mkdirs(cov_paths, cargs):
 
         ### write coverage results in the following format
         cfile = open(cov_paths['id_delta_cov'], 'w')
-        cfile.write("# id:NNNNNN*_file, cycle, src_file, coverage_type, fcn/line\n")
+        if cargs.cover_corpus or cargs.coverage_at_exit:
+            cfile.write("# id:[range]..., cycle, src_file, coverage_type, fcn/line\n")
+        else:
+            cfile.write("# id:NNNNNN*_file, cycle, src_file, coverage_type, fcn/line\n")
         cfile.close()
 
     return
