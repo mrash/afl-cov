@@ -367,7 +367,7 @@ Basic `--help` output appears below:
 
 ## License
 `afl-cov` is released as open source software under the terms of
-the **GNU General Public License (GPL v2)**. The latest release can be found
+the **GNU General Public License (GPL v2+)**. The latest release can be found
 at [https://github.com/mrash/afl-cov/releases](https://github.com/mrash/afl-cov/releases)
 
 ## Contact
