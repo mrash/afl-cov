@@ -61,6 +61,12 @@ def main():
         print "afl-cov-" + __version__
         return exit_success
 
+    if cargs.gcov_check or cargs.gcov_check_bin:
+        if is_gcov_enabled(cargs):
+            return exit_success
+        else:
+            return exit_failure
+
     if not check_requirements(cargs):
         return exit_failure
 
@@ -804,7 +810,7 @@ def init_tracking(cov_paths, cargs):
 def is_exe(fpath):
     return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
-def is_gcov_enabled(binary, cargs):
+def is_bin_gcov_enabled(binary, cargs):
 
     rv = False
 
@@ -812,10 +818,13 @@ def is_gcov_enabled(binary, cargs):
     for line in run_cmd("%s -a %s" % (cargs.readelf_path, binary),
             False, cargs, WANT_OUTPUT)[1]:
         if ' __gcov' in line:
-            if cargs.validate_args:
-                print "    Binary '%s' is compiled with code coverage support." % binary
+            if cargs.validate_args or cargs.gcov_check or cargs.gcov_check_bin:
+                print "[+] Binary '%s' is compiled with code coverage support." % binary
             rv = True
             break
+
+    if not rv and cargs.gcov_check_bin:
+        print "[*] Binary '%s' is not compiled with code coverage support." % binary
 
     return rv
 
@@ -859,7 +868,11 @@ def check_requirements(cargs):
 
     return False
 
-def validate_cargs(cargs):
+def is_gcov_enabled(cargs):
+
+    if not is_exe(cargs.readelf_path):
+        print "[*] Need a valid path to readelf, use --readelf-path"
+        return False
 
     if cargs.coverage_cmd:
         if 'AFL_FILE' not in cargs.coverage_cmd:
@@ -876,7 +889,7 @@ def validate_cargs(cargs):
                 continue
             if (which(part)):
                 found_exec = True
-                if is_exe(cargs.readelf_path) and is_gcov_enabled(part, cargs):
+                if is_bin_gcov_enabled(part, cargs):
                     found_code_cov_binary = True
                 break
 
@@ -885,10 +898,25 @@ def validate_cargs(cargs):
                     "--coverage-cmd '%s'" % cargs.coverage_cmd
             return False
 
-        if is_exe(cargs.readelf_path) and not found_code_cov_binary:
+        if not found_code_cov_binary:
             print "[*] Could not find an executable binary with code " \
                     "coverage support ('-fprofile-arcs -ftest-coverage') " \
                     "in --coverage-cmd '%s'" % cargs.coverage_cmd
+            return False
+
+    elif cargs.gcov_check_bin:
+        if not is_bin_gcov_enabled(cargs.gcov_check_bin, cargs):
+            return False
+    elif cargs.gcov_check:
+        print "[*] Either --coverage-cmd or --gcov-check-bin required in --gcov-check mode"
+        return False
+
+    return True
+
+def validate_cargs(cargs):
+
+    if cargs.coverage_cmd:
+        if not is_gcov_enabled(cargs):
             return False
     else:
         if not cargs.func_search and not cargs.line_search:
@@ -900,18 +928,10 @@ def validate_cargs(cargs):
             print "[*] --code-dir path does not exist"
             return False
 
-        ### make sure the code has been compiled with code coverage support,
-        ### so *.gcno files should exist
-        found_code_coverage_support = False
-        for root, dirs, files in os.walk(cargs.code_dir):
-            for filename in files:
-                if filename[-5:] == '.gcno':
-                    found_code_coverage_support = True
-        if not found_code_coverage_support:
-            print "[*] Could not find any *.gcno files in --code-dir " \
-                    "'%s', is code coverage ('-fprofile-arcs -ftest-coverage') " \
-                    "compiled in?" % cargs.code_dir
+        ### make sure code coverage support is compiled in
+        if not gcno_files_exist(cargs):
             return False
+
     else:
         if not cargs.func_search and not cargs.line_search:
             print "[*] Must set --code-dir unless using --func-search " \
@@ -941,6 +961,23 @@ def validate_cargs(cargs):
         print "[*] --disable-lcov-web and --lcov-web-all are incompatible"
         return False
 
+    return True
+
+
+def gcno_files_exist(cargs):
+
+    ### make sure the code has been compiled with code coverage support,
+    ### so *.gcno files should exist
+    found_code_coverage_support = False
+    for root, dirs, files in os.walk(cargs.code_dir):
+        for filename in files:
+            if filename[-5:] == '.gcno':
+                found_code_coverage_support = True
+    if not found_code_coverage_support:
+        print "[*] Could not find any *.gcno files in --code-dir " \
+                "'%s', is code coverage ('-fprofile-arcs -ftest-coverage') " \
+                "compiled in?" % cargs.code_dir
+        return False
     return True
 
 def is_afl_running(cargs):
@@ -1096,6 +1133,12 @@ def parse_cmdline():
     p.add_argument("--sleep", type=int,
             help="In --live mode, # of seconds to sleep between checking for new queue files",
             default=60)
+    p.add_argument("--gcov-check", action='store_true',
+            help="Check to see if there is a binary in --coverage-cmd (or in --gcov-check-bin) has coverage support",
+            default=False)
+    p.add_argument("--gcov-check-bin", type=str,
+            help="Test a specific binary for code coverage support",
+            default=False)
     p.add_argument("--background", action='store_true',
             help="Background mode - if also in --live mode, will exit when the alf-fuzz process is finished",
             default=False)

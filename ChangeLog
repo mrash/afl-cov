@@ -16,7 +16,8 @@ afl-cov-0.6 (06/05/2016):
       execute a series of AFL test cases (instead of each individual test
       case one at a time) before coverage is calculated.
     - Add a prerequisite test to make sure the targeted binary is compiled
-      with code coverage support ('-fprofile-arcs -ftest-coverage').
+      with code coverage support ('-fprofile-arcs -ftest-coverage'). This test
+      can be run by itself with --gcov-check.
     - Use the tempfile module for temporary files (suggested by Markus
       Teufelberger in issue #19).
 
