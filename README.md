@@ -282,66 +282,88 @@ there will be one `<dirname>` directory path for each `afl-fuzz` instance.
 ## Usage Information
 Basic `--help` output appears below:
 
-    usage: afl-cov [-h] [-e COVERAGE_CMD] [-d AFL_FUZZING_DIR] [-c CODE_DIR]
-               [-O] [--disable-cmd-redirection] [--disable-lcov-web]
+    usage: afl-cov [-h] [-e COVERAGE_CMD] [-d AFL_FUZZING_DIR] [-c CODE_DIR] [-O]
+               [--disable-cmd-redirection] [--disable-lcov-web]
                [--disable-coverage-init] [--coverage-include-lines]
-               [--enable-branch-coverage] [--live] [--sleep SLEEP]
-               [--background] [--lcov-web-all] [--preserve-all-lcov-files]
+               [--enable-branch-coverage] [--live] [--cover-corpus]
+               [--coverage-at-exit] [--sleep SLEEP] [--gcov-check]
+               [--gcov-check-bin GCOV_CHECK_BIN] [--background]
+               [--lcov-web-all] [--disable-lcov-exclude-pattern]
+               [--lcov-exclude-pattern LCOV_EXCLUDE_PATTERN]
                [--func-search FUNC_SEARCH] [--line-search LINE_SEARCH]
                [--src-file SRC_FILE] [--afl-queue-id-limit AFL_QUEUE_ID_LIMIT]
-               [--lcov-path LCOV_PATH] [--genhtml-path GENHTML_PATH] [-v] [-V]
-               [-q]
+               [--ignore-core-pattern] [--lcov-path LCOV_PATH]
+               [--genhtml-path GENHTML_PATH] [--readelf-path READELF_PATH]
+               [--stop-afl] [--validate-args] [-v] [-V] [-q]
 
     optional arguments:
       -h, --help            show this help message and exit
       -e COVERAGE_CMD, --coverage-cmd COVERAGE_CMD
-                            set command to exec (including args, and assumes
-                            code coverage support)
+                            Set command to exec (including args, and assumes code
+                            coverage support)
       -d AFL_FUZZING_DIR, --afl-fuzzing-dir AFL_FUZZING_DIR
                             top level AFL fuzzing directory
       -c CODE_DIR, --code-dir CODE_DIR
-                            directory where the code lives (compiled with code
+                            Directory where the code lives (compiled with code
                             coverage support)
-      -O, --overwrite       overwrite existing coverage results
+      -O, --overwrite       Overwrite existing coverage results
       --disable-cmd-redirection
-                            disable redirection of command results to /dev/null
-      --disable-lcov-web    disable generation of all lcov web code coverage
+                            Disable redirection of command results to /dev/null
+      --disable-lcov-web    Disable generation of all lcov web code coverage
                             reports
       --disable-coverage-init
-                            disable initialization of code coverage counters at
+                            Disable initialization of code coverage counters at
                             afl-cov startup
       --coverage-include-lines
-                            include lines in zero-coverage status files
+                            Include lines in zero-coverage status files
       --enable-branch-coverage
-                            include branch coverage in code coverage reports
-                            (may be slow)
-      --live                process a live AFL directory, and afl-cov will exit
+                            Include branch coverage in code coverage reports (may
+                            be slow)
+      --live                Process a live AFL directory, and afl-cov will exit
                             when it appears afl-fuzz has been stopped
-      --sleep SLEEP         In --live mode, # of seconds to sleep between
-                            checking for new queue files
-      --background          background mode - if also in --live mode, will exit
+      --cover-corpus        Measure coverage after running all available tests
+                            instead of individually per queue file
+      --coverage-at-exit    Only calculate coverage just before afl-cov exit.
+      --sleep SLEEP         In --live mode, # of seconds to sleep between checking
+                            for new queue files
+      --gcov-check          Check to see if there is a binary in --coverage-cmd
+                            (or in --gcov-check-bin) has coverage support
+      --gcov-check-bin GCOV_CHECK_BIN
+                            Test a specific binary for code coverage support
+      --background          Background mode - if also in --live mode, will exit
                             when the alf-fuzz process is finished
-      --lcov-web-all        generate lcov web reports for all id:NNNNNN* files
+      --lcov-web-all        Generate lcov web reports for all id:NNNNNN* files
                             instead of just the last one
-      --preserve-all-lcov-files
-                            Keep all lcov files (not usually necessary)
+      --disable-lcov-exclude-pattern
+                            Allow default /usr/include/* pattern to be included in
+                            lcov results
+      --lcov-exclude-pattern LCOV_EXCLUDE_PATTERN
+                            Set exclude pattern for lcov results
       --func-search FUNC_SEARCH
-                            search for coverage of a specific function
+                            Search for coverage of a specific function
       --line-search LINE_SEARCH
-                            search for coverage of a specific line number
+                            Search for coverage of a specific line number
                             (requires --src-file)
-      --src-file SRC_FILE   restrict function or line search to a specific
-                            source file
+      --src-file SRC_FILE   Restrict function or line search to a specific source
+                            file
       --afl-queue-id-limit AFL_QUEUE_ID_LIMIT
-                            limit the number of id:NNNNNN* files processed in
-                            the AFL queue/ directory
+                            Limit the number of id:NNNNNN* files processed in the
+                            AFL queue/ directory
+      --ignore-core-pattern
+                            Ignore the /proc/sys/kernel/core_pattern setting in
+                            --live mode
       --lcov-path LCOV_PATH
-                            path to lcov command
+                            Path to lcov command
       --genhtml-path GENHTML_PATH
-                            path to genhtml command
-      -v, --verbose         verbose mode
-      -V, --version         print version and exit
-      -q, --quiet           quiet mode
+                            Path to genhtml command
+      --readelf-path READELF_PATH
+                            Path to readelf command
+      --stop-afl            Stop all running afl-fuzz instances associated with
+                            --afl-fuzzing-dir <dir>
+      --validate-args       Validate args and exit
+      -v, --verbose         Verbose mode
+      -V, --version         Print version and exit
+      -q, --quiet           Quiet mode
 
 ## License
 `afl-cov` is released as open source software under the terms of
