@@ -891,7 +891,7 @@ def is_gcov_enabled(cargs):
                 found_exec = True
                 if is_bin_gcov_enabled(part, cargs):
                     found_code_cov_binary = True
-                break
+                    break
 
         if not found_exec:
             print "[*] Could not find an executable binary " \
