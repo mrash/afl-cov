@@ -889,7 +889,7 @@ def is_gcov_enabled(cargs):
                 continue
             if (which(part)):
                 found_exec = True
-                if is_bin_gcov_enabled(part, cargs):
+                if not cargs.disable_gcov_check and is_bin_gcov_enabled(part, cargs):
                     found_code_cov_binary = True
                     break
 
@@ -898,7 +898,7 @@ def is_gcov_enabled(cargs):
                     "--coverage-cmd '%s'" % cargs.coverage_cmd
             return False
 
-        if not found_code_cov_binary:
+        if not cargs.disable_gcov_check and not found_code_cov_binary:
             print "[*] Could not find an executable binary with code " \
                     "coverage support ('-fprofile-arcs -ftest-coverage') " \
                     "in --coverage-cmd '%s'" % cargs.coverage_cmd
@@ -1138,6 +1138,9 @@ def parse_cmdline():
             default=False)
     p.add_argument("--gcov-check-bin", type=str,
             help="Test a specific binary for code coverage support",
+            default=False)
+    p.add_argument("--disable-gcov-check", type=str,
+            help="Disable check for code coverage support",
             default=False)
     p.add_argument("--background", action='store_true',
             help="Background mode - if also in --live mode, will exit when the alf-fuzz process is finished",
