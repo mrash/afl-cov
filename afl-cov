@@ -510,7 +510,7 @@ def search_cov(cargs):
                 if cargs.src_file:
                     if cargs.src_file == src_file:
                         logr("[+] Function '%s' in file: '%s' executed by: '%s', cycle: %s" \
-                                % (val, current_file, id_file, cycle_num),
+                                % (val, src_file, id_file, cycle_num),
                                 log_file, cargs)
                         search_rv = True
                 else:
@@ -523,7 +523,7 @@ def search_cov(cargs):
                     and cargs.line_search and val == cargs.line_search:
                 if cargs.src_file == src_file:
                     logr("[+] Line '%s' in file: '%s' executed by: '%s', cycle: %s" \
-                            % (val, current_file, id_file, cycle_num),
+                            % (val, src_file, id_file, cycle_num),
                             log_file, cargs)
                     search_rv = True
 
