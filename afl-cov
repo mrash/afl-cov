@@ -564,6 +564,8 @@ def lcov_gen_coverage(cov_paths, cargs):
     lcov_opts = ''
     if cargs.enable_branch_coverage:
         lcov_opts += ' --rc lcov_branch_coverage=1'
+    if cargs.follow:
+        lcov_opts += ' --follow'
 
     run_cmd(cargs.lcov_path \
             + lcov_opts
@@ -1104,6 +1106,8 @@ def parse_cmdline():
             help="top level AFL fuzzing directory")
     p.add_argument("-c", "--code-dir", type=str,
             help="Directory where the code lives (compiled with code coverage support)")
+    p.add_argument("-f", "--follow", action='store_true',
+            help="Follow links when searching .da files", default=False)
     p.add_argument("-O", "--overwrite", action='store_true',
             help="Overwrite existing coverage results", default=False)
     p.add_argument("--disable-cmd-redirection", action='store_true',
