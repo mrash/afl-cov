@@ -5,6 +5,9 @@ afl-cov-0.6.1 (11/27/2017):
     - Add the '--disable-gcov-check' argument so that the check for whether
       the target binary has been compiled with code coverage support can be
       disabled.
+    - (Denis Kasak) Fix incorrect variable name in search_cov.
+    - Bug fix noted by @umlaeute be more permissive with instrumented binaries
+      check.
 
 afl-cov-0.6 (06/05/2016):
     - (Markus Teufelberger) Add --cover-corpus argument so that code coverage
