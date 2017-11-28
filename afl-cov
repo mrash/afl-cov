@@ -2,7 +2,7 @@
 #
 #  File: afl-cov
 #
-#  Version: 0.6
+#  Version: 0.6.1
 #
 #  Purpose: Perform lcov coverage diff's against each AFL queue file to see
 #           new functions and line coverage evolve from an AFL fuzzing cycle.
@@ -44,7 +44,7 @@ try:
 except ImportError:
     import subprocess
 
-__version__ = '0.6'
+__version__ = '0.6.1'
 
 NO_OUTPUT   = 0
 WANT_OUTPUT = 1
