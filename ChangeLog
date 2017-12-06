@@ -1,3 +1,14 @@
+afl-cov-0.6.1 (11/27/2017):
+    - (James Steele) Add the '--follow' command line argument which provides an
+      option identical to that available on lcov that instructs the search for
+      .da files to follow symlinks (which are not traversed by default).
+    - Add the '--disable-gcov-check' argument so that the check for whether
+      the target binary has been compiled with code coverage support can be
+      disabled.
+    - (Denis Kasak) Fix incorrect variable name in search_cov.
+    - Bug fix noted by @umlaeute be more permissive with instrumented binaries
+      check.
+
 afl-cov-0.6 (06/05/2016):
     - (Markus Teufelberger) Add --cover-corpus argument so that code coverage
       is measured only after all new AFL test cases are executed. The main

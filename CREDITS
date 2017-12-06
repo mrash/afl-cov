@@ -9,3 +9,12 @@ Markus Teufelberger
       advantage is that code coverage results are produced more quickly in
       this mode since AFL can generate test cases - at least initially - much
       faster than code coverage can be calculated for each test case.
+
+James Steele
+    - Submitted a patch to add the '--follow' command line argument which
+      provides an option identical to that available on lcov that instructs the
+      search for .da files to follow symlinks (which are not traversed by
+      default).
+
+Denis Kasak
+    - Submitted a patch to correct a variable naming bug.
