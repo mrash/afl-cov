@@ -821,7 +821,13 @@ def is_bin_gcov_enabled(binary, cargs):
             False, cargs, WANT_OUTPUT)[1]:
         if ' __gcov' in line:
             if cargs.validate_args or cargs.gcov_check or cargs.gcov_check_bin:
-                print "[+] Binary '%s' is compiled with code coverage support." % binary
+                print "[+] Binary '%s' is compiled with code coverage support gcc." % binary
+            rv = True
+            break
+
+        if '__llvm_gcov' in line:
+            if cargs.validate_args or cargs.gcov_check or cargs.gcov_check_bin:
+                print "[+] Binary '%s' is compiled with code coverage support via llvm." % binary
             rv = True
             break
 
