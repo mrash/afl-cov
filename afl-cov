@@ -313,6 +313,9 @@ def coverage_diff(cycle_num, fuzz_dir, cov_paths, afl_file, cov, cargs):
 
     new_cov = extract_coverage(cov_paths['lcov_info_final'], cargs)
 
+    if not new_cov:
+        return
+
     ### We aren't interested in the number of times AFL has executed
     ### a line or function (since we can't really get this anyway because
     ### gcov stats aren't influenced by AFL directly) - what we want is
@@ -456,6 +459,10 @@ def extract_coverage(lcov_file, cargs):
 
     search_rv = False
     tmp_cov = {}
+
+    if not os.path.exists(lcov_file):
+        logr("[-] Coverage file '%s' does not exist, skipping." % lcov_file)
+        return tmp_cov
 
     ### populate old lcov output for functions/lines that were called
     ### zero times
@@ -708,10 +715,12 @@ def run_cmd(cmd, log_file, cargs, collect):
                 out.append(line.rstrip('\n'))
         os.unlink(fh.name)
 
-    if (es != 0) and (collect == LOG_ERRORS):
+    if (es != 0) and (collect == LOG_ERRORS or collect == WANT_OUTPUT):
         if log_file:
             logr("    Non-zero exit status '%d' for CMD: %s" % (es, cmd),
                     log_file, cargs)
+            for line in out:
+                logr(line, log_file, cargs)
         else:
             print "    Non-zero exit status '%d' for CMD: %s" % (es, cmd)
 
