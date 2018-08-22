@@ -46,6 +46,10 @@ except ImportError:
 
 __version__ = '0.6.1'
 
+NO_OUTPUT   = 0
+WANT_OUTPUT = 1
+LOG_ERRORS  = 2
+
 def main():
 
     exit_success = 0
@@ -178,10 +182,10 @@ def process_afl_test_cases(cargs):
                 ### for the current AFL test case file
                 if run_once:
                     run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
-                            cov_paths['log_file'], cargs)
+                            cov_paths['log_file'], cargs, NO_OUTPUT)
                 else:
                     out_lines = run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
-                            cov_paths['log_file'], cargs)[1]
+                            cov_paths['log_file'], cargs, WANT_OUTPUT)[1]
                     run_once = True
 
                 if cargs.afl_queue_id_limit \
@@ -575,7 +579,7 @@ def lcov_gen_coverage(cov_paths, cargs):
             + " --no-checksum --capture --directory " \
             + cargs.code_dir + " --output-file " \
             + cov_paths['lcov_info'], \
-            cov_paths['log_file'], cargs)
+            cov_paths['log_file'], cargs, LOG_ERRORS)
 
     if (cargs.disable_lcov_exclude_pattern):
         out_lines = run_cmd(cargs.lcov_path \
@@ -583,7 +587,7 @@ def lcov_gen_coverage(cov_paths, cargs):
                 + " --no-checksum -a " + cov_paths['lcov_base'] \
                 + " -a " + cov_paths['lcov_info'] \
                 + " --output-file " + cov_paths['lcov_info_final'], \
-                cov_paths['log_file'], cargs)[1]
+                cov_paths['log_file'], cargs, WANT_OUTPUT)[1]
     else:
         tmp_file = NamedTemporaryFile(delete=False)
         run_cmd(cargs.lcov_path \
@@ -591,13 +595,13 @@ def lcov_gen_coverage(cov_paths, cargs):
                 + " --no-checksum -a " + cov_paths['lcov_base'] \
                 + " -a " + cov_paths['lcov_info'] \
                 + " --output-file " + tmp_file.name, \
-                cov_paths['log_file'], cargs)
+                cov_paths['log_file'], cargs, LOG_ERRORS)
         out_lines = run_cmd(cargs.lcov_path \
                 + lcov_opts
                 + " --no-checksum -r " + tmp_file.name \
                 + " " + cargs.lcov_exclude_pattern + "  --output-file " \
                 + cov_paths['lcov_info_final'],
-                cov_paths['log_file'], cargs)[1]
+                cov_paths['log_file'], cargs, WANT_OUTPUT)[1]
         if os.path.exists(tmp_file.name):
             os.unlink(tmp_file.name)
 
@@ -634,7 +638,7 @@ def gen_web_cov_report(fuzz_dir, cov_paths, cargs):
             + " --output-directory " \
             + cov_paths['web_dir'] + " " \
             + cov_paths['lcov_info_final'], \
-            cov_paths['log_file'], cargs)
+            cov_paths['log_file'], cargs, LOG_ERRORS)
 
     logr("[+] Final lcov web report: %s/%s" % \
             (cov_paths['web_dir'], 'index.html'), cov_paths['log_file'], cargs)
@@ -682,18 +686,19 @@ def get_running_pid(stats_file, pid_re):
                 break
     return pid
 
-def run_cmd(cmd, log_file, cargs):
+def run_cmd(cmd, log_file, cargs, collect):
 
-    output = []
-
-    if log_file:
-        logr("    CMD: %s" % cmd, log_file, cargs)
+    out = []
 
     if cargs.verbose:
-        print "    CMD: %s" % cmd
+        if log_file:
+            logr("    CMD: %s" % cmd, log_file, cargs)
+        else:
+            print "    CMD: %s" % cmd
 
     fh = None
-    if cargs.disable_cmd_redirection:
+    if cargs.disable_cmd_redirection or collect == WANT_OUTPUT \
+            or collect == LOG_ERRORS:
         fh = NamedTemporaryFile(delete=False)
     else:
         fh = open(os.devnull, 'w')
@@ -703,24 +708,23 @@ def run_cmd(cmd, log_file, cargs):
 
     fh.close()
 
-    if cargs.disable_cmd_redirection:
+    if cargs.disable_cmd_redirection or collect == WANT_OUTPUT \
+            or collect == LOG_ERRORS:
         with open(fh.name, 'r') as f:
             for line in f:
-                output.append(line.rstrip('\n'))
+                out.append(line.rstrip('\n'))
         os.unlink(fh.name)
 
-    if (es != 0):
+    if (es != 0) and (collect == LOG_ERRORS or collect == WANT_OUTPUT):
         if log_file:
             logr("    Non-zero exit status '%d' for CMD: %s" % (es, cmd),
                     log_file, cargs)
-            for line in output:
+            for line in out:
                 logr(line, log_file, cargs)
         else:
             print "    Non-zero exit status '%d' for CMD: %s" % (es, cmd)
-            for line in output:
-                print line
 
-    return es, output
+    return es, out
 
 def import_fuzzing_dirs(cov_paths, cargs):
 
@@ -800,7 +804,7 @@ def init_tracking(cov_paths, cargs):
         run_cmd(cargs.lcov_path \
                 + lcov_opts \
                 + " --no-checksum --zerocounters --directory " \
-                + cargs.code_dir, cov_paths['log_file'], cargs)
+                + cargs.code_dir, cov_paths['log_file'], cargs, LOG_ERRORS)
 
         run_cmd(cargs.lcov_path \
                 + lcov_opts
@@ -808,7 +812,7 @@ def init_tracking(cov_paths, cargs):
                 + " --directory " + cargs.code_dir \
                 + " --output-file " \
                 + cov_paths['lcov_base'], \
-                cov_paths['log_file'], cargs)
+                cov_paths['log_file'], cargs, LOG_ERRORS)
 
     return True
 
@@ -823,7 +827,7 @@ def is_bin_gcov_enabled(binary, cargs):
 
     ### run readelf against the binary to see if it contains gcov support
     for line in run_cmd("%s -a %s" % (cargs.readelf_path, binary),
-            False, cargs)[1]:
+            False, cargs, WANT_OUTPUT)[1]:
         if ' __gcov' in line:
             if cargs.validate_args or cargs.gcov_check or cargs.gcov_check_bin:
                 print "[+] Binary '%s' is compiled with code coverage support gcc." % binary
