@@ -1,5 +1,15 @@
 # afl-cov - AFL Fuzzing Code Coverage
 
+- [Introduction](#introduction)
+- [Prerequisites](#prerequisites)
+- [Workflow](#workflow)
+   - [Parallelized AFL Execution](#parallelized-afl-execution)
+   - [Other Examples](#other-examples)
+- [Directory / File Structure](#directory-file-structure)
+- [Usage Information](#usage-information)
+- [License](#license)
+- [Contact](#contact)
+
 ## Introduction
 `afl-cov` uses test case files produced by the
 [AFL fuzzer](http://lcamtuf.coredump.cx/afl/) `afl-fuzz` to generate gcov code
@@ -372,5 +382,5 @@ at [https://github.com/mrash/afl-cov/releases](https://github.com/mrash/afl-cov/
 
 ## Contact
 All feature requests and bug fixes are managed through github issues tracking.
-However, you can email me (michael.rash_AT_gmail.com), or reach me through
+However, you can also email me (michael.rash_AT_gmail.com), or reach me through
 Twitter ([@michaelrash](https://twitter.com/michaelrash)).
