@@ -263,7 +263,7 @@ $ grep validate_cmd_msg /path/to/afl-fuzz-output/cov/id-delta-cov
 id:000002,orig:somestr384.start, 3, /path/to/project-gcov/file.c, function, validate_cmd_msg()
 ```
 
-## Directory / File Structure
+## Directory and File Structure
 `afl-cov` creates a few files and directories for coverage results within the
 specified `afl-fuzz` directory (`-d`). These files and directories are
 displayed below, and all are contained within the main
