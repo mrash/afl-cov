@@ -5,7 +5,7 @@
 - [Workflow](#workflow)
    - [Parallelized AFL Execution](#parallelized-afl-execution)
    - [Other Examples](#other-examples)
-- [Directory / File Structure](#directory-file-structure)
+- [Directory and File Structure](#directory-and-file-structure)
 - [Usage Information](#usage-information)
 - [License](#license)
 - [Contact](#contact)
