@@ -902,7 +902,7 @@ def is_gcov_enabled(cargs):
         found_code_cov_binary = False
 
         for part in cargs.coverage_cmd.split(' '):
-            if part[0] == ' ' or part[0] == '-':
+            if not part or part[0] == ' ' or part[0] == '-':
                 continue
             if (which(part)):
                 found_exec = True
