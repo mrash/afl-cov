@@ -311,7 +311,8 @@ def coverage_diff(cycle_num, fuzz_dir, cov_paths, afl_file, cov, cargs):
         delta_file = 'id:[%d-%d]...' % \
                 (cov_paths['id_min'], cov_paths['id_max'])
 
-    new_cov = extract_coverage(cov_paths['lcov_info_final'], cargs)
+    new_cov = extract_coverage(cov_paths['lcov_info_final'],
+            cov_paths['log_file'], cargs)
 
     if not new_cov:
         return
@@ -455,13 +456,14 @@ def cov_init(cfile, cov):
             cov[k][cfile]['line'] = {}
     return
 
-def extract_coverage(lcov_file, cargs):
+def extract_coverage(lcov_file, log_file, cargs):
 
     search_rv = False
     tmp_cov = {}
 
     if not os.path.exists(lcov_file):
-        logr("[-] Coverage file '%s' does not exist, skipping." % lcov_file)
+        logr("[-] Coverage file '%s' does not exist, skipping." % lcov_file,
+                log_file, cargs)
         return tmp_cov
 
     ### populate old lcov output for functions/lines that were called
