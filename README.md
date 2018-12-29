@@ -203,8 +203,8 @@ represent cumulative code coverage across all AFL test cases. This data can then
 be reviewed to ensure that all expected functions are indeed exercised by AFL -
 just point a web browser at `/path/to/afl-fuzz-output/cov/web/lcov-web-final.html`.
 Below is a sample of what this report looks like for a cumulative AFL fuzzing
-run - this is against the fwknop project, and the full report is
-[available here](https://www.cipherdyne.org/fwknop/2.6.7-afl-lcov-results/).
+run - this is against the [fwknop](https://github.com/mrash/fwknop) project, and
+the full report is [available here](https://www.cipherdyne.org/fwknop/2.6.7-afl-lcov-results/).
 Note that even though fwknop has a dedicated set of
 [AFL wrappers](https://github.com/mrash/fwknop/tree/master/test/afl), it is still
 difficult to achieve high percentages of code coverage. This provides evidence
