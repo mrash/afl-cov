@@ -82,8 +82,12 @@ the output directory used by `afl-fuzz`, and the command to execute along with
 associated arguments. This command and arguments should closely resemble the
 manner in which `afl-fuzz` executes the targeted binary during the fuzzing
 cycle. If there is already an existing directory of AFL fuzzing results, then
-just omit the `--live` argument to process the existing results. Here is an
-example:
+just omit the `--live` argument to process the existing results.
+
+NOTE: you can use both afl's "@@" or afl-cov's original "AFL_FILE" placeholder for
+the --coverage-cmd line parameter.
+
+Here is an example:
 
 ```bash
 $ cd /path/to/project-gcov/
@@ -98,6 +102,7 @@ The `AFL_FILE` string above refers to the test case file that AFL will
 build in the `queue/` directory under `/path/to/afl-fuzz-output`. Just leave this
 string as-is since `afl-cov` will automatically substitute it with each AFL
 `queue/id:NNNNNN*` in succession as it builds the code coverage reports.
+You can also use @@ instead of AFL_FILE, both notations work.
 
 Also, in the above command, this handles the case where the AFL fuzzing cycle
 is fuzzing the targeted binary via stdin. This explains the
@@ -107,7 +112,7 @@ fuzzing with AFL where a file is read from the filesystem, here is an example:
 ```bash
 $ cd /path/to/project-gcov/
 $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
-"LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f AFL_FILE -a -b -c" \
+"LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f @@ -a -b -c" \
 --code-dir .
 ```
 
