@@ -44,7 +44,7 @@ try:
 except ImportError:
     import subprocess
 
-__version__ = '0.6.2'
+__version__ = '0.6.2.1'
 
 NO_OUTPUT   = 0
 WANT_OUTPUT = 1
