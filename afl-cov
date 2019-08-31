@@ -575,6 +575,8 @@ def lcov_gen_coverage(cov_paths, cargs):
         lcov_opts += ' --rc lcov_branch_coverage=1'
     if cargs.follow:
         lcov_opts += ' --follow'
+    if cargs.clang:
+        lcov_opts += ' --gcov-tool afl-cov-wrapper '
 
     run_cmd(cargs.lcov_path \
             + lcov_opts
@@ -800,6 +802,8 @@ def init_tracking(cov_paths, cargs):
         lcov_opts = ''
         if cargs.enable_branch_coverage:
             lcov_opts += ' --rc lcov_branch_coverage=1 '
+        if cargs.clang:
+            lcov_opts += ' --gcov-tool afl-cov-wrapper '
 
         ### reset code coverage counters - this is done only once as
         ### afl-cov is spinning up even if AFL is running in parallel mode
@@ -1204,6 +1208,8 @@ def parse_cmdline():
             help="Print version and exit", default=False)
     p.add_argument("-q", "--quiet", action='store_true',
             help="Quiet mode", default=False)
+    p.add_argument("--clang", action='store_true',
+            help="Support clang-based (afl-clang-fast) instrumentation", default=False)
 
     return p.parse_args()
 
