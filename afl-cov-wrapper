@@ -1,0 +1,2 @@
+#!/bin/bash
+exec ${AFL_COV_LLVM:-llvm-cov} gcov "$@"
