@@ -14,9 +14,11 @@ while [ -n "$1" ]; do
     SECONDS=`egrep run_time "$1"/fuzzer_stats | awk '{print$3}'`
     TIME=`date -u -d "@$SECONDS" +"%T"`
     echo "run_clock         : $TIME"
-  } | sort | tee -a "$1"/stats.out
+  } | sort | tee "$1"/stats.out
   LINES=
-  test -e "$1"/cov/afl-cov.log && LINES=`grep -w lines "$1"/cov/afl-cov.log|tail -n 1|sed 's/.*(//'|sed 's/ .*//'`
-  echo "coverage          : $LINES" | tee -a "$1"/stats.out
+  test -e "$1"/cov/afl-cov.log && {
+    LINES=`grep -w lines "$1"/cov/afl-cov.log|tail -n 1|sed 's/.*(//'|sed 's/ .*//'`
+    echo "coverage          : $LINES" | tee -a "$1"/stats.out
+  }
   shift
 done
