@@ -2,12 +2,13 @@
 #
 #  File: afl-cov
 #
-#  Version: 0.6.3
+#  Version: 0.6.4
 #
 #  Purpose: Perform lcov coverage diff's against each AFL queue file to see
 #           new functions and line coverage evolve from an AFL fuzzing cycle.
 #
 #  Copyright (C) 2015-2016 Michael Rash (mbr@cipherdyne.org)
+#  Copyright (C) 2018-2020 Marc "vanHauser" Heuse (mh@mh-sec.de)
 #
 #  License (GNU General Public License version 2 or any later version):
 #
@@ -44,7 +45,7 @@ try:
 except ImportError:
     import subprocess
 
-__version__ = '0.6.3'
+__version__ = '0.6.4'
 
 NO_OUTPUT   = 0
 WANT_OUTPUT = 1
@@ -185,10 +186,10 @@ def process_afl_test_cases(cargs):
                 ### for the current AFL test case file
                 if run_once:
                     run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
-                            cov_paths['log_file'], cargs, NO_OUTPUT)
+                            cov_paths['log_file'], cargs, NO_OUTPUT, True, f)
                 else:
                     out_lines = run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
-                            cov_paths['log_file'], cargs, WANT_OUTPUT)[1]
+                            cov_paths['log_file'], cargs, WANT_OUTPUT, True, f)[1]
                     run_once = True
 
                 if cargs.afl_queue_id_limit \
@@ -584,7 +585,7 @@ def lcov_gen_coverage(cov_paths, cargs):
             + " --no-checksum --capture --directory " \
             + cargs.code_dir + " --output-file " \
             + cov_paths['lcov_info'], \
-            cov_paths['log_file'], cargs, LOG_ERRORS)
+            cov_paths['log_file'], cargs, LOG_ERRORS, False, "")
 
     if (cargs.disable_lcov_exclude_pattern):
         out_lines = run_cmd(cargs.lcov_path \
@@ -592,7 +593,7 @@ def lcov_gen_coverage(cov_paths, cargs):
                 + " --no-checksum -a " + cov_paths['lcov_base'] \
                 + " -a " + cov_paths['lcov_info'] \
                 + " --output-file " + cov_paths['lcov_info_final'], \
-                cov_paths['log_file'], cargs, WANT_OUTPUT)[1]
+                cov_paths['log_file'], cargs, WANT_OUTPUT, False, "")[1]
     else:
         tmp_file = NamedTemporaryFile(delete=False)
         run_cmd(cargs.lcov_path \
@@ -600,13 +601,13 @@ def lcov_gen_coverage(cov_paths, cargs):
                 + " --no-checksum -a " + cov_paths['lcov_base'] \
                 + " -a " + cov_paths['lcov_info'] \
                 + " --output-file " + tmp_file.name, \
-                cov_paths['log_file'], cargs, LOG_ERRORS)
+                cov_paths['log_file'], cargs, LOG_ERRORS, False, "")
         out_lines = run_cmd(cargs.lcov_path \
                 + lcov_opts
                 + " --no-checksum -r " + tmp_file.name \
                 + " " + cargs.lcov_exclude_pattern + "  --output-file " \
                 + cov_paths['lcov_info_final'],
-                cov_paths['log_file'], cargs, WANT_OUTPUT)[1]
+                cov_paths['log_file'], cargs, WANT_OUTPUT, False, "")[1]
         if os.path.exists(tmp_file.name):
             os.unlink(tmp_file.name)
 
@@ -643,7 +644,7 @@ def gen_web_cov_report(fuzz_dir, cov_paths, cargs):
             + " --output-directory " \
             + cov_paths['web_dir'] + " " \
             + cov_paths['lcov_info_final'], \
-            cov_paths['log_file'], cargs, LOG_ERRORS)
+            cov_paths['log_file'], cargs, LOG_ERRORS, False, "")
 
     logr("[+] Final lcov web report: %s/%s" % \
             (cov_paths['web_dir'], 'index.html'), cov_paths['log_file'], cargs)
@@ -691,15 +692,9 @@ def get_running_pid(stats_file, pid_re):
                 break
     return pid
 
-def run_cmd(cmd, log_file, cargs, collect):
+def run_cmd(cmd, log_file, cargs, collect, aflrun, fn):
 
     out = []
-
-    if cargs.verbose:
-        if log_file:
-            logr("    CMD: %s" % cmd, log_file, cargs)
-        else:
-            print "    CMD: %s" % cmd
 
     fh = None
     if cargs.disable_cmd_redirection or collect == WANT_OUTPUT \
@@ -707,6 +702,15 @@ def run_cmd(cmd, log_file, cargs, collect):
         fh = NamedTemporaryFile(delete=False)
     else:
         fh = open(os.devnull, 'w')
+
+    if aflrun == True and len(fn) > 0:
+        cmd = 'cat ' + fn + ' | ' + cmd
+
+    if cargs.verbose:
+        if log_file:
+            logr("    CMD: %s" % cmd, log_file, cargs)
+        else:
+            print "    CMD: %s" % cmd
 
     es = subprocess.call(cmd, stdin=None,
             stdout=fh, stderr=subprocess.STDOUT, shell=True)
@@ -809,7 +813,7 @@ def init_tracking(cov_paths, cargs):
         run_cmd(cargs.lcov_path \
                 + lcov_opts \
                 + " --no-checksum --zerocounters --directory " \
-                + cargs.code_dir, cov_paths['log_file'], cargs, LOG_ERRORS)
+                + cargs.code_dir, cov_paths['log_file'], cargs, LOG_ERRORS, False, "")
 
         run_cmd(cargs.lcov_path \
                 + lcov_opts
@@ -817,7 +821,7 @@ def init_tracking(cov_paths, cargs):
                 + " --directory " + cargs.code_dir \
                 + " --output-file " \
                 + cov_paths['lcov_base'], \
-                cov_paths['log_file'], cargs, LOG_ERRORS)
+                cov_paths['log_file'], cargs, LOG_ERRORS, False, "")
 
     return True
 
@@ -832,7 +836,7 @@ def is_bin_gcov_enabled(binary, cargs):
 
     ### run readelf against the binary to see if it contains gcov support
     for line in run_cmd("%s -a %s" % (cargs.readelf_path, binary),
-            False, cargs, WANT_OUTPUT)[1]:
+            False, cargs, WANT_OUTPUT, False, "")[1]:
         if ' __gcov' in line:
             if cargs.validate_args or cargs.gcov_check or cargs.gcov_check_bin:
                 print "[+] Binary '%s' is compiled with code coverage support via gcc." % binary
@@ -897,12 +901,9 @@ def is_gcov_enabled(cargs):
         return False
 
     if cargs.coverage_cmd:
-        if 'AFL_FILE' not in cargs.coverage_cmd:
-            print "[*] --coverage-cmd must contain AFL_FILE"
-            return False
-
         ### make sure at least one component of the command is an
         ### executable and is compiled with code coverage support
+
         found_exec = False
         found_code_cov_binary = False
 

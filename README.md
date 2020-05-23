@@ -1,6 +1,6 @@
 # afl-cov - AFL Fuzzing Code Coverage
 
-Version: 0.6.3
+Version: 0.6.4
 
 - [Preface](#preface)
 - [Introduction](#introduction)
@@ -18,8 +18,9 @@ Version: 0.6.3
 This is a modified afl-cov fork because the original author's account is
 inactive :-(
 
-It has three changes:
- * afl-cov now accepts "@@" like AFL++ in the command line
+It has four changes:
+ * afl-cov now accepts "@@" like AFL++ in the target command parameters
+ * afl-cov now can send to targets that read on stdin (just omit @@)
  * afl-cov.sh makes using afl-cov easier (just needs two parameters)
  * afl-cov-build.sh makes builing a target for coverage easier
  * afl-stat.sh shows the statistics of a run (in progress or completed)
