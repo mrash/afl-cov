@@ -12,13 +12,15 @@ while [ -n "$1" ]; do
   {
     egrep 'run_time|execs_done|execs_per_sec|paths_total|^unique_|stability' "$1"/fuzzer_stats
     SECONDS=`egrep run_time "$1"/fuzzer_stats | awk '{print$3}'`
-    TIME=`date -u -d "@$SECONDS" +"%T"`
-    echo "run_clock         : $TIME"
+    test -n "$SECONDS" && {
+      TIME=`date -u -d "@$SECONDS" +"%T"`
+      echo "run_clock         : $TIME"
+    }
   } | sort | tee "$1"/stats.out
   LINES=
   test -e "$1"/cov/afl-cov.log && {
     LINES=`grep -w lines "$1"/cov/afl-cov.log|tail -n 1|sed 's/.*(//'|sed 's/ .*//'`
-    echo "coverage          : $LINES" | tee -a "$1"/stats.out
+    echo "coverage          : $LINES lines" | tee -a "$1"/stats.out
   }
   shift
 done

@@ -24,11 +24,14 @@ test "$1" = "-v" && { OPT="-v" ; shift ; }
 afl-cov $OPT -d "$DST" --cover-corpus --coverage-cmd "$2" --code-dir . --overwrite
 
 test -e "$1"/fuzzer_stats && {
-  echo "runtime           :" $(expr `grep last_update "$DST"/fuzzer_stats|awk '{print$3}'` - `grep start_time "$DST"/fuzzer_stats|awk '{print$3}'`) seconds
+  DIFF=$(expr `grep last_update "$DST"/fuzzer_stats|awk '{print$3}'` - `grep start_time "$DST"/fuzzer_stats|awk '{print$3}'`)
+  echo "runtime           : $DIFF seconds"
+  TIME=`date -u -d "@$SECONDS" +"%T"`
+  echo "run_clock         : $TIME"
   egrep 'execs_done|paths_total|^unique_|stability' "$DST"/fuzzer_stats
   LINES=
   test -e "$1"/cov/afl-cov.log && LINES=`grep -w lines "$1"/cov/afl-cov.log|tail -n 1|sed 's/.*(//'|sed 's/ .*//'`
-  echo "coverage          : $LINES"
+  echo "coverage          : $LINES lines"
 } | tee "$1"/stats.out
 
 echo open "file://$DST/cov/web/index.html"
