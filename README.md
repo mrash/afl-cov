@@ -1,6 +1,6 @@
 # afl-cov - AFL Fuzzing Code Coverage
 
-Version: 0.6.4
+Version: 0.6.5
 
 - [Preface](#preface)
 - [Introduction](#introduction)

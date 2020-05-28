@@ -1,3 +1,6 @@
+afl-cov-0.6.5 (2020-05-28)
+   - switched to python3
+
 afl-cov-0.6.4 (2020-05-23):
    - afl-cov now supports stdin targets (just omit @@/AFL_FILE)
    - enhance scripts

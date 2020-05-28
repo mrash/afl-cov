@@ -1,8 +1,8 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 #
 #  File: afl-cov
 #
-#  Version: 0.6.4
+#  Version: 0.6.5
 #
 #  Purpose: Perform lcov coverage diff's against each AFL queue file to see
 #           new functions and line coverage evolve from an AFL fuzzing cycle.
@@ -45,7 +45,7 @@ try:
 except ImportError:
     import subprocess
 
-__version__ = '0.6.4'
+__version__ = '0.6.5'
 
 NO_OUTPUT   = 0
 WANT_OUTPUT = 1
@@ -62,7 +62,7 @@ def main():
         cargs.coverage_cmd = cargs.coverage_cmd.replace('@@', 'AFL_FILE')
 
     if cargs.version:
-        print "afl-cov-" + __version__
+        print("afl-cov-" + __version__)
         return exit_success
 
     if cargs.gcov_check or cargs.gcov_check_bin:
@@ -100,7 +100,7 @@ def run_in_background():
     ### capability anyway
     pid = os.fork()
     if (pid < 0):
-        print "[*] fork() error, exiting."
+        print("[*] fork() error, exiting.")
         os._exit()
     elif (pid > 0):
         os._exit(0)
@@ -710,7 +710,7 @@ def run_cmd(cmd, log_file, cargs, collect, aflrun, fn):
         if log_file:
             logr("    CMD: %s" % cmd, log_file, cargs)
         else:
-            print "    CMD: %s" % cmd
+            print("    CMD: %s" % cmd)
 
     es = subprocess.call(cmd, stdin=None,
             stdout=fh, stderr=subprocess.STDOUT, shell=True)
@@ -731,14 +731,14 @@ def run_cmd(cmd, log_file, cargs, collect, aflrun, fn):
             for line in out:
                 logr(line, log_file, cargs)
         else:
-            print "    Non-zero exit status '%d' for CMD: %s" % (es, cmd)
+            print("    Non-zero exit status '%d' for CMD: %s" % (es, cmd))
 
     return es, out
 
 def import_fuzzing_dirs(cov_paths, cargs):
 
     if not cargs.afl_fuzzing_dir:
-        print "[*] Must specify AFL fuzzing dir with --afl-fuzzing-dir or -d"
+        print("[*] Must specify AFL fuzzing dir with --afl-fuzzing-dir or -d")
         return False
 
     if 'top_dir' not in cov_paths:
@@ -794,8 +794,8 @@ def init_tracking(cov_paths, cargs):
     else:
         if is_dir(cov_paths['top_dir']):
             if not cargs.func_search and not cargs.line_search:
-                print "[*] Existing coverage dir %s found, use --overwrite to " \
-                        "re-calculate coverage" % (cov_paths['top_dir'])
+                print("[*] Existing coverage dir %s found, use --overwrite to " \
+                        "re-calculate coverage" % (cov_paths['top_dir']))
                 return False
         else:
             mkdirs(cov_paths, cargs)
@@ -839,18 +839,18 @@ def is_bin_gcov_enabled(binary, cargs):
             False, cargs, WANT_OUTPUT, False, "")[1]:
         if ' __gcov' in line:
             if cargs.validate_args or cargs.gcov_check or cargs.gcov_check_bin:
-                print "[+] Binary '%s' is compiled with code coverage support via gcc." % binary
+                print("[+] Binary '%s' is compiled with code coverage support via gcc." % binary)
             rv = True
             break
 
         if '__llvm_gcov' in line:
             if cargs.validate_args or cargs.gcov_check or cargs.gcov_check_bin:
-                print "[+] Binary '%s' is compiled with code coverage support via llvm." % binary
+                print("[+] Binary '%s' is compiled with code coverage support via llvm." % binary)
             rv = True
             break
 
     if not rv and cargs.gcov_check_bin:
-        print "[*] Binary '%s' is not compiled with code coverage support." % binary
+        print("[*] Binary '%s' is not compiled with code coverage support." % binary)
 
     return rv
 
@@ -878,26 +878,26 @@ def check_requirements(cargs):
         genhtml = which ( cargs.genhtml_path )
 
     if ( lcov == None or gcov == None):
-        print "Required command not found :"
+        print("Required command not found :")
     else:
         if (genhtml == None and not cargs.disable_lcov_web):
-            print "Required command not found :"
+            print("Required command not found :")
         else:
             return True
 
     if ( lcov == None ):
-        print "[*] lcov command does not exist : %s" % (cargs.lcov_path)
+        print("[*] lcov command does not exist : %s" % (cargs.lcov_path))
     if ( genhtml == None and not cargs.disable_lcov_web):
-        print "[*] genhtml command does not exist : %s" % (cargs.genhtml_path)
+        print("[*] genhtml command does not exist : %s" % (cargs.genhtml_path))
     if ( gcov == None ):
-        print "[*] gcov command does not exist : %s" % (cargs.gcov_path)
+        print("[*] gcov command does not exist : %s" % (cargs.gcov_path))
 
     return False
 
 def is_gcov_enabled(cargs):
 
     if not is_exe(cargs.readelf_path):
-        print "[*] Need a valid path to readelf, use --readelf-path"
+        print("[*] Need a valid path to readelf, use --readelf-path")
         return False
 
     if cargs.coverage_cmd:
@@ -917,21 +917,21 @@ def is_gcov_enabled(cargs):
                     break
 
         if not found_exec:
-            print "[*] Could not find an executable binary " \
-                    "--coverage-cmd '%s'" % cargs.coverage_cmd
+            print("[*] Could not find an executable binary " \
+                    "--coverage-cmd '%s'" % cargs.coverage_cmd)
             return False
 
         if not cargs.disable_gcov_check and not found_code_cov_binary:
-            print "[*] Could not find an executable binary with code " \
+            print("[*] Could not find an executable binary with code " \
                     "coverage support ('-fprofile-arcs -ftest-coverage') " \
-                    "in --coverage-cmd '%s'" % cargs.coverage_cmd
+                    "in --coverage-cmd '%s'" % cargs.coverage_cmd)
             return False
 
     elif cargs.gcov_check_bin:
         if not is_bin_gcov_enabled(cargs.gcov_check_bin, cargs):
             return False
     elif cargs.gcov_check:
-        print "[*] Either --coverage-cmd or --gcov-check-bin required in --gcov-check mode"
+        print("[*] Either --coverage-cmd or --gcov-check-bin required in --gcov-check mode")
         return False
 
     return True
@@ -943,12 +943,12 @@ def validate_cargs(cargs):
             return False
     else:
         if not cargs.func_search and not cargs.line_search:
-            print "[*] Must set --coverage-cmd or --func-search/--line-search"
+            print("[*] Must set --coverage-cmd or --func-search/--line-search")
             return False
 
     if cargs.code_dir:
         if not is_dir(cargs.code_dir):
-            print "[*] --code-dir path does not exist"
+            print("[*] --code-dir path does not exist")
             return False
 
         ### make sure code coverage support is compiled in
@@ -957,18 +957,18 @@ def validate_cargs(cargs):
 
     else:
         if not cargs.func_search and not cargs.line_search:
-            print "[*] Must set --code-dir unless using --func-search " \
-                    "against existing afl-cov directory"
+            print("[*] Must set --code-dir unless using --func-search " \
+                    "against existing afl-cov directory")
             return False
 
     if cargs.func_search or cargs.line_search:
         if not cargs.afl_fuzzing_dir:
-            print "[*] Must set --afl-fuzzing-dir"
+            print("[*] Must set --afl-fuzzing-dir")
             return False
         if cargs.func_search and '()' not in cargs.func_search:
             cargs.func_search += '()'
         if cargs.line_search and not cargs.src_file:
-            print "[*] Must set --src-file in --line-search mode"
+            print("[*] Must set --src-file in --line-search mode")
             return False
 
     if cargs.live and not cargs.ignore_core_pattern:
@@ -976,12 +976,12 @@ def validate_cargs(cargs):
             return False
 
     if not cargs.live and not is_dir(cargs.afl_fuzzing_dir):
-        print "[*] It doesn't look like directory '%s' exists" \
-            % (cargs.afl_fuzzing_dir)
+        print("[*] It doesn't look like directory '%s' exists" \
+            % (cargs.afl_fuzzing_dir))
         return False
 
     if cargs.disable_lcov_web and cargs.lcov_web_all:
-        print "[*] --disable-lcov-web and --lcov-web-all are incompatible"
+        print("[*] --disable-lcov-web and --lcov-web-all are incompatible")
         return False
 
     return True
@@ -997,24 +997,24 @@ def gcno_files_exist(cargs):
             if filename[-5:] == '.gcno':
                 found_code_coverage_support = True
     if not found_code_coverage_support:
-        print "[*] Could not find any *.gcno files in --code-dir " \
+        print("[*] Could not find any *.gcno files in --code-dir " \
                 "'%s', is code coverage ('-fprofile-arcs -ftest-coverage') " \
-                "compiled in?" % cargs.code_dir
+                "compiled in?" % cargs.code_dir)
         return False
     return True
 
 def is_afl_running(cargs):
     while not is_dir(cargs.afl_fuzzing_dir):
         if not cargs.background:
-            print "[-] Sleep for %d seconds for AFL fuzzing directory to be created..." \
-                    % cargs.sleep
+            print("[-] Sleep for %d seconds for AFL fuzzing directory to be created..." \
+                    % cargs.sleep)
         time.sleep(cargs.sleep)
 
     ### if we make it here then afl-fuzz is presumably running
     while not is_afl_fuzz_running(cargs):
         if not cargs.background:
-            print "[-] Sleep for %d seconds waiting for afl-fuzz to be started...." \
-                % cargs.sleep
+            print("[-] Sleep for %d seconds waiting for afl-fuzz to be started...." \
+                % cargs.sleep)
         time.sleep(cargs.sleep)
     return
 
@@ -1053,7 +1053,7 @@ def is_dir(dpath):
 
 def logr(pstr, log_file, cargs):
     if not cargs.background and not cargs.quiet:
-        print "    " + pstr
+        print("    " + pstr)
     append_file(pstr, log_file)
     return
 
@@ -1066,22 +1066,22 @@ def stop_afl(cargs):
     ### is also stopped.
 
     if not cargs.afl_fuzzing_dir:
-        print "[*] Must set --afl-fuzzing-dir"
+        print("[*] Must set --afl-fuzzing-dir")
         return False
 
     if not is_dir(cargs.afl_fuzzing_dir):
-        print "[*] Doesn't look like AFL fuzzing directory '%s' exists." \
-                % cargs.afl_fuzzing_dir
+        print("[*] Doesn't look like AFL fuzzing directory '%s' exists." \
+                % cargs.afl_fuzzing_dir)
         return False
 
     if os.path.exists(cargs.afl_fuzzing_dir + '/fuzzer_stats'):
         afl_pid = get_running_pid(cargs.afl_fuzzing_dir + '/fuzzer_stats',
                 'fuzzer_pid\s+\:\s+(\d+)')
         if afl_pid:
-            print "[+] Stopping running afl-fuzz instance, PID: %d" % afl_pid
+            print("[+] Stopping running afl-fuzz instance, PID: %d" % afl_pid)
             os.kill(afl_pid, signal.SIGTERM)
         else:
-            print "[-] No running afl-fuzz instance"
+            print("[-] No running afl-fuzz instance")
             rv = False
     else:
         found = False
@@ -1090,12 +1090,12 @@ def stop_afl(cargs):
             if os.path.exists(stats_file):
                 afl_pid = get_running_pid(stats_file, 'fuzzer_pid\s+\:\s+(\d+)')
                 if afl_pid:
-                    print "[+] Stopping running afl-fuzz instance, PID: %d" \
-                            % afl_pid
+                    print("[+] Stopping running afl-fuzz instance, PID: %d" \
+                            % afl_pid)
                     os.kill(afl_pid, signal.SIGTERM)
                     found = True
         if not found:
-            print "[-] No running afl-fuzz instance"
+            print("[-] No running afl-fuzz instance")
             rv = False
 
     return rv
@@ -1112,8 +1112,8 @@ def check_core_pattern():
         with open(core_pattern_file, 'r') as f:
             if f.readline().rstrip()[0] == '|':
                 ### same logic as implemented by afl-fuzz itself
-                print "[*] afl-fuzz requires 'echo core >%s'" \
-                        % core_pattern_file
+                print("[*] afl-fuzz requires 'echo core >%s'" \
+                        % core_pattern_file)
                 rv = False
     return rv
 
