@@ -5,6 +5,7 @@ test -z "$1" -o "$1" = "-h" && {
   echo Sets build options for coverage instrumentation with gcov/lcov.
   echo Set CC/CXX environment variables if you do not want gcc/g++.
   echo Example: "$0 ./configure --disable-shared"
+  exit 1
 }
 
 test -z "$CC" && export CC=gcc
