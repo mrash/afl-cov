@@ -1,6 +1,6 @@
 # afl-cov - AFL Fuzzing Code Coverage
 
-Version: 0.6.5
+Version: 0.6.6
 
 - [Preface](#preface)
 - [Introduction](#introduction)
@@ -23,6 +23,8 @@ It has four changes:
  * afl-cov now can send to targets that read on stdin (just omit @@)
  * afl-cov.sh makes using afl-cov easier (just needs two parameters)
  * afl-cov-build.sh makes builing a target for coverage easier
+ * afl-cov/afl-cov.sh/afl-cov-build.sh now support clang coverage, just add
+   -c to afl-cov.sh/afl-cov-build.sh (and --clang to afl-cov)
  * afl-stat.sh shows the statistics of a run (in progress or completed)
 
 Enjoy!

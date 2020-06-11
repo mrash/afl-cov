@@ -3,15 +3,20 @@
 # easy wrapper script for afl-cov
 #
 test "$1" = "-h" -o -z "$1" && { 
-  echo "Syntax: $0 [-v] out-dir \"exec cmd --foo @@\""
+  echo "Syntax: $0 [-v] [-c] out-dir \"exec cmd --foo @@\""
   echo
   echo Generates the coverage information for an AFL run.
   echo Must be run from the top directory of the coverage build.
-  echo The -v option enables verbose output
+  echo The -v option enables verbose output.
+  echo The option -c specifies that clang was used for the coverage build
   echo
   echo Example: $0 ../target/out \"tools/target @@\"
   exit 1
 }
+
+test "$1" = "-v" && { OPT1="-v" ; shift ; }
+test "$1" = "-c" && { OPT2="--clang" ; shift ; }
+test "$1" = "-v" && { OPT1="-v" ; shift ; }
 
 test -d "$1" || { echo Error: not a directory: $1 ; exit 1 ; } 
 test -e "$1"/queue || { echo Error: not an afl-fuzz -o out directory ; exit 1 ; }
@@ -20,8 +25,7 @@ HOMEPATH=`dirname $0`
 DST=`realpath "$1"`
 export PATH=$HOMEPATH:$PATH
 
-test "$1" = "-v" && { OPT="-v" ; shift ; }
-afl-cov $OPT -d "$DST" --cover-corpus --coverage-cmd "$2" --code-dir . --overwrite
+afl-cov $OPT1 $OPT2 -d "$DST" --cover-corpus --coverage-cmd "$2" --code-dir . --overwrite
 
 test -e "$1"/fuzzer_stats && {
   DIFF=$(expr `grep last_update "$DST"/fuzzer_stats|awk '{print$3}'` - `grep start_time "$DST"/fuzzer_stats|awk '{print$3}'`)

@@ -2,7 +2,7 @@
 #
 #  File: afl-cov
 #
-#  Version: 0.6.5
+#  Version: 0.6.6
 #
 #  Purpose: Perform lcov coverage diff's against each AFL queue file to see
 #           new functions and line coverage evolve from an AFL fuzzing cycle.
@@ -45,7 +45,7 @@ try:
 except ImportError:
     import subprocess
 
-__version__ = '0.6.5'
+__version__ = '0.6.6'
 
 NO_OUTPUT   = 0
 WANT_OUTPUT = 1
@@ -579,6 +579,8 @@ def lcov_gen_coverage(cov_paths, cargs):
         lcov_opts += ' --rc lcov_branch_coverage=1'
     if cargs.follow:
         lcov_opts += ' --follow'
+    if cargs.clang:
+        lcov_opts += ' --gcov-tool afl-clang-cov.sh'
 
     run_cmd(cargs.lcov_path \
             + lcov_opts
@@ -807,6 +809,8 @@ def init_tracking(cov_paths, cargs):
         lcov_opts = ''
         if cargs.enable_branch_coverage:
             lcov_opts += ' --rc lcov_branch_coverage=1 '
+        if cargs.clang:
+            lcov_opts += ' --gcov-tool afl-clang-cov.sh'
 
         ### reset code coverage counters - this is done only once as
         ### afl-cov is spinning up even if AFL is running in parallel mode
@@ -1148,6 +1152,9 @@ def parse_cmdline():
             default=False)
     p.add_argument("--live", action='store_true',
             help="Process a live AFL directory, and afl-cov will exit when it appears afl-fuzz has been stopped",
+            default=False)
+    p.add_argument("--clang", action='store_true',
+            help="If clang was used for coverage compilation instead of gcc"",
             default=False)
     p.add_argument("--cover-corpus", action='store_true',
             help="Measure coverage after running all available tests instead of individually per queue file",
