@@ -13,8 +13,10 @@ while [ -n "$1" ]; do
     egrep 'run_time|execs_done|execs_per_sec|paths_total|^unique_|stability' "$1"/fuzzer_stats
     SECONDS=`egrep run_time "$1"/fuzzer_stats | awk '{print$3}'`
     test -n "$SECONDS" && {
+      DAYS=`expr $SECONDS / 86400`
+      SECONDS=`expr $SECONDS % 86400`
       TIME=`date -u -d "@$SECONDS" +"%T"`
-      echo "run_clock         : $TIME"
+      echo "run_clock         : $DAYS:$TIME"
     }
   } | sort | tee "$1"/stats.out
   LINES=
