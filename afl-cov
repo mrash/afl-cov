@@ -1154,7 +1154,7 @@ def parse_cmdline():
             help="Process a live AFL directory, and afl-cov will exit when it appears afl-fuzz has been stopped",
             default=False)
     p.add_argument("--clang", action='store_true',
-            help="If clang was used for coverage compilation instead of gcc"",
+            help="If clang was used for coverage compilation instead of gcc",
             default=False)
     p.add_argument("--cover-corpus", action='store_true',
             help="Measure coverage after running all available tests instead of individually per queue file",
