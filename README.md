@@ -18,13 +18,15 @@ Version: 0.6.6
 This is a modified afl-cov fork because the original author's account is
 inactive :-(
 
-It has four changes:
+It has several improvements:
  * afl-cov now accepts "@@" like AFL++ in the target command parameters
  * afl-cov now can send to targets that read on stdin (just omit @@)
+ * afl-cov has a timeout -T option to hangs are not an issue, default 5s
  * afl-cov.sh makes using afl-cov easier (just needs two parameters)
- * afl-cov-build.sh makes builing a target for coverage easier
+ * afl-cov-build.sh makes builing a target for coverage easier, just type
+   `afl-cov-build.sh make`
  * afl-cov/afl-cov.sh/afl-cov-build.sh now support clang coverage, just add
-   -c to afl-cov.sh/afl-cov-build.sh (and --clang to afl-cov)
+   -c to afl-cov.sh/afl-cov-build.sh (--clang for afl-cov)
  * afl-stat.sh shows the statistics of a run (in progress or completed)
 
 Enjoy!

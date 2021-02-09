@@ -186,10 +186,10 @@ def process_afl_test_cases(cargs):
                 ### for the current AFL test case file
                 if run_once:
                     run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
-                            cov_paths['log_file'], cargs, NO_OUTPUT, True, f)
+                            cov_paths['log_file'], cargs, NO_OUTPUT, True, f, cargs.timeout)
                 else:
                     out_lines = run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
-                            cov_paths['log_file'], cargs, WANT_OUTPUT, True, f)[1]
+                            cov_paths['log_file'], cargs, WANT_OUTPUT, True, f, cargs.timeout)[1]
                     run_once = True
 
                 if cargs.afl_queue_id_limit \
@@ -694,7 +694,7 @@ def get_running_pid(stats_file, pid_re):
                 break
     return pid
 
-def run_cmd(cmd, log_file, cargs, collect, aflrun, fn):
+def run_cmd(cmd, log_file, cargs, collect, aflrun, fn, timeout=None):
 
     out = []
 
@@ -713,6 +713,9 @@ def run_cmd(cmd, log_file, cargs, collect, aflrun, fn):
             logr("    CMD: %s" % cmd, log_file, cargs)
         else:
             print("    CMD: %s" % cmd)
+
+    if timeout:
+        cmd = 'timeout -s KILL %s %s' % (timeout, cmd)
 
     es = subprocess.call(cmd, stdin=None,
             stdout=fh, stderr=subprocess.STDOUT, shell=True)
@@ -1215,6 +1218,8 @@ def parse_cmdline():
             help="Print version and exit", default=False)
     p.add_argument("-q", "--quiet", action='store_true',
             help="Quiet mode", default=False)
+    p.add_argument("-T", "--timeout", type=str,
+            help="timeout (default 5 seconds)", default='5')
 
     return p.parse_args()
 

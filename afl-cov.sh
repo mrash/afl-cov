@@ -19,10 +19,18 @@ test "$1" = "-c" && { OPT2="--clang" ; shift ; }
 test "$1" = "-v" && { OPT1="-v" ; shift ; }
 
 test -d "$1" || { echo Error: not a directory: $1 ; exit 1 ; } 
-test -e "$1"/queue || { echo Error: not an afl-fuzz -o out directory ; exit 1 ; }
+
+
+DST=`realpath "$1"`
+test -e "$DST"/queue || {
+  DST="$DST/default"
+  test -e "$DST"/queue || {
+    echo Error: not an afl-fuzz -o out directory
+    exit 1
+  }
+}
 
 HOMEPATH=`dirname $0`
-DST=`realpath "$1"`
 export PATH=$HOMEPATH:$PATH
 
 afl-cov $OPT1 $OPT2 -d "$DST" --cover-corpus --coverage-cmd "$2" --code-dir . --overwrite
