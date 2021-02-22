@@ -724,7 +724,7 @@ def run_cmd(cmd, log_file, cargs, collect, aflrun, fn, timeout=None):
 
     if cargs.disable_cmd_redirection or collect == WANT_OUTPUT \
             or collect == LOG_ERRORS:
-        with open(fh.name, 'r', 'rb') as f:
+        with open(fh.name, 'r', encoding='ISO-8859-1') as f:
             for line in f:
                 out.append(line.rstrip('\n'))
         os.unlink(fh.name)
