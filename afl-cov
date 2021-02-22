@@ -224,8 +224,8 @@ def process_afl_test_cases(cargs):
                         logr("\n\n++++++ BEGIN - first exec output for CMD: %s" % \
                                 (cargs.coverage_cmd.replace('AFL_FILE', f)),
                                 cov_paths['log_file'], cargs)
-                        for line in out_lines.decode("ascii"):
-                            logr("    %s" % (line), cov_paths['log_file'], cargs)
+                        for line in out_lines:
+                            logr("    %s" % (line.decode("ascii")), cov_paths['log_file'], cargs)
                         logr("++++++ END\n", cov_paths['log_file'], cargs)
 
                 cov_paths['id_file'] = "%s" % os.path.basename(f)
