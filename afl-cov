@@ -224,7 +224,7 @@ def process_afl_test_cases(cargs):
                         logr("\n\n++++++ BEGIN - first exec output for CMD: %s" % \
                                 (cargs.coverage_cmd.replace('AFL_FILE', f)),
                                 cov_paths['log_file'], cargs)
-                        for line in out_lines:
+                        for line in out_lines.decode("ascii"):
                             logr("    %s" % (line), cov_paths['log_file'], cargs)
                         logr("++++++ END\n", cov_paths['log_file'], cargs)
 
@@ -619,16 +619,16 @@ def lcov_gen_coverage(cov_paths, cargs):
 
 def log_coverage(out_lines, log_file, cargs):
     for line in out_lines:
-        m = re.search('^\s+(lines\.\..*\:\s.*)', line)
+        m = re.search('^\s+(lines\.\..*\:\s.*)', line.decode("ascii"))
         if m and m.group(1):
             logr("    " + m.group(1), log_file, cargs)
         else:
-            m = re.search('^\s+(functions\.\..*\:\s.*)', line)
+            m = re.search('^\s+(functions\.\..*\:\s.*)', line.decode("ascii"))
             if m and m.group(1):
                 logr("    " + m.group(1), log_file, cargs)
             else:
                 if cargs.enable_branch_coverage:
-                    m = re.search('^\s+(branches\.\..*\:\s.*)', line)
+                    m = re.search('^\s+(branches\.\..*\:\s.*)', line.decode("ascii"))
                     if m and m.group(1):
                         logr("    " + m.group(1),
                                 log_file, cargs)
@@ -724,9 +724,9 @@ def run_cmd(cmd, log_file, cargs, collect, aflrun, fn, timeout=None):
 
     if cargs.disable_cmd_redirection or collect == WANT_OUTPUT \
             or collect == LOG_ERRORS:
-        with open(fh.name, 'r', encoding='ISO-8859-1') as f:
+        with open(fh.name, 'rb') as f:
             for line in f:
-                out.append(line.rstrip('\n'))
+                out.append(line.rstrip(b'\n'))
         os.unlink(fh.name)
 
     if (es != 0) and (collect == LOG_ERRORS or collect == WANT_OUTPUT):
@@ -734,7 +734,7 @@ def run_cmd(cmd, log_file, cargs, collect, aflrun, fn, timeout=None):
             logr("    Non-zero exit status '%d' for CMD: %s" % (es, cmd),
                     log_file, cargs)
             for line in out:
-                logr(line, log_file, cargs)
+                logr(line.decode("ascii"), log_file, cargs)
         else:
             print("    Non-zero exit status '%d' for CMD: %s" % (es, cmd))
 
@@ -844,13 +844,13 @@ def is_bin_gcov_enabled(binary, cargs):
     ### run readelf against the binary to see if it contains gcov support
     for line in run_cmd("%s -a %s" % (cargs.readelf_path, binary),
             False, cargs, WANT_OUTPUT, False, "")[1]:
-        if ' __gcov' in line:
+        if b' __gcov' in line:
             if cargs.validate_args or cargs.gcov_check or cargs.gcov_check_bin:
                 print("[+] Binary '%s' is compiled with code coverage support via gcc." % binary)
             rv = True
             break
 
-        if '__llvm_gcov' in line:
+        if b'__llvm_gcov' in line:
             if cargs.validate_args or cargs.gcov_check or cargs.gcov_check_bin:
                 print("[+] Binary '%s' is compiled with code coverage support via llvm." % binary)
             rv = True
