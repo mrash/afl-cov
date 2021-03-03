@@ -31,7 +31,7 @@ test -e "$DST"/queue || {
 }
 
 HOMEPATH=`dirname $0`
-export PATH=$HOMEPATH:$PATH
+export PATH="$HOMEPATH:$PATH"
 
 afl-cov $OPT1 $OPT2 -d "$DST" --cover-corpus --coverage-cmd "$2" --code-dir . --overwrite
 
