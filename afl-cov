@@ -8,7 +8,7 @@
 #           new functions and line coverage evolve from an AFL fuzzing cycle.
 #
 #  Copyright (C) 2015-2016 Michael Rash (mbr@cipherdyne.org)
-#  Copyright (C) 2018-2020 Marc "vanHauser" Heuse (mh@mh-sec.de)
+#  Copyright (C) 2018-2021 Marc "vanHauser" Heuse (mh@mh-sec.de)
 #
 #  License (GNU General Public License version 2 or any later version):
 #

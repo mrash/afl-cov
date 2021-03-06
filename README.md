@@ -1,6 +1,6 @@
 # afl-cov - AFL Fuzzing Code Coverage
 
-Version: 0.6.6
+Version: 0.7.0
 
 - [Preface](#preface)
 - [Introduction](#introduction)
@@ -19,6 +19,7 @@ This is a modified afl-cov fork because the original author's account is
 inactive :-(
 
 It has several improvements:
+ * Much, much faster!
  * afl-cov now accepts "@@" like AFL++ in the target command parameters
  * afl-cov now can send to targets that read on stdin (just omit @@)
  * afl-cov has a timeout -T option to hangs are not an issue, default 5s
