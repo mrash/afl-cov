@@ -285,7 +285,15 @@ def process_afl_test_cases(cargs: argparse.Namespace) -> bool:
                         cov_paths["log_file"],
                         cargs,
                     )
-                    time.sleep(cargs.sleep)
+                    try:
+                        time.sleep(cargs.sleep)
+                    except KeyboardInterrupt:
+                        log(
+                            b"[!] Stopping live collection due to user interrupt",
+                            cov_paths["log_file"],
+                            cargs,
+                        )
+                        break
                     continue
             else:
                 logr(
@@ -1170,9 +1178,9 @@ def validate_cargs(cargs: argparse.Namespace) -> bool:
             print("[*] Must set --src-file in --line-search mode")
             return False
 
-    if cargs.live and not cargs.ignore_core_pattern:
-        if not check_core_pattern():
-            return False
+    #if cargs.live and not cargs.ignore_core_pattern:
+    #    if not check_core_pattern():
+    #        return False
 
     if not cargs.live and not is_dir(cargs.afl_fuzzing_dir):
         print(
@@ -1309,20 +1317,20 @@ def stop_afl(cargs: argparse.Namespace) -> bool:
     return rv
 
 
-def check_core_pattern() -> bool:
-    rv = True
-
-    core_pattern_file = "/proc/sys/kernel/core_pattern"
-
-    # check /proc/sys/kernel/core_pattern to see if afl-fuzz will
-    # accept it
-    if os.path.exists(core_pattern_file):
-        with open(core_pattern_file, "rb") as f:
-            if f.readline().rstrip()[0] == b"|":
-                # same logic as implemented by afl-fuzz itself
-                print("[*] afl-fuzz requires 'echo core >%s'" % core_pattern_file)
-                rv = False
-    return rv
+#def check_core_pattern() -> bool:
+#    rv = True
+#
+#    core_pattern_file = "/proc/sys/kernel/core_pattern"
+#
+#    # check /proc/sys/kernel/core_pattern to see if afl-fuzz will
+#    # accept it
+#    if os.path.exists(core_pattern_file):
+#        with open(core_pattern_file, "rb") as f:
+#            if f.readline().rstrip()[0] == b"|":
+#                # same logic as implemented by afl-fuzz itself
+#                print("[*] afl-fuzz requires 'echo core >%s'" % core_pattern_file)
+#                rv = False
+#    return rv
 
 
 def parse_cmdline() -> argparse.Namespace:
