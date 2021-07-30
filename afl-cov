@@ -811,10 +811,11 @@ def is_afl_fuzz_running(cargs):
         pid = get_running_pid(stats_file, rb"fuzzer_pid\s+\:\s+(\d+)")
     else:
         for p in os.listdir(cargs.afl_fuzzing_dir):
-            stats_file = "%s/%s/fuzzer_stats" % (
-                cargs.afl_fuzzing_dir.encode(),
-                p.encode(),
-            )
+            #stats_file = "%s/%s/fuzzer_stats" % (
+            #    cargs.afl_fuzzing_dir.encode(),
+            #    p.encode(),
+            #)
+            stats_file = "%s/%s/fuzzer_stats" % ( cargs.afl_fuzzing_dir, p)
             if os.path.exists(stats_file):
                 # allow a single running AFL instance in parallel mode
                 # to mean that AFL is running (and may be generating
