@@ -17,7 +17,7 @@ test -z "$CXX" -a -z "$CLANG" && export CXX=g++
 test -z "$CC" -a -n "$CLANG" && export CC=clang
 test -z "$CXX" -a -n "$CLANG" && export CXX=clang++
 
-export CFLAGS="-fprofile-arcs -ftest-coverage"
+export CFLAGS="-fprofile-arcs -ftest-coverage -DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION"
 export CXXFLAGS="$CFLAGS"
 export CPPFLAGS="$CFLAGS"
 test -z "$CLANG" && export LDFLAGS="-lgcov --coverage"
