@@ -865,6 +865,9 @@ def run_cmd(
     else:
         fh = open(os.devnull, "wb")
 
+    if timeout:
+        cmd = "timeout -s KILL %s %s" % (timeout, cmd)
+
     if aflrun is True and len(fn) > 0:
         cmd = "cat " + fn + " | " + cmd
 
@@ -873,9 +876,6 @@ def run_cmd(
             logr(b"    CMD: %s" % cmd.encode(), log_file, cargs)
         else:
             print("    CMD: %s" % cmd)
-
-    if timeout:
-        cmd = "timeout -s KILL %s %s" % (timeout, cmd)
 
     exit_code = subprocess.call(
         cmd, stdin=None, stdout=fh, stderr=subprocess.STDOUT, shell=True
