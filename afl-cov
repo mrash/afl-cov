@@ -186,7 +186,7 @@ def process_afl_test_cases(cargs: argparse.Namespace) -> bool:
                 logr(
                     b"[+] AFL test case: %s (%d / %d), cycle: %d"
                     % (
-                        os.path.basename(f).encode(),
+                        os.path.basename(f).encode(errors="namereplace"),
                         num_files,
                         len(afl_files),
                         curr_cycle,
@@ -873,7 +873,7 @@ def run_cmd(
 
     if cargs.verbose:
         if log_file:
-            logr(b"    CMD: %s" % cmd.encode(), log_file, cargs)
+            logr(b"    CMD: %s" % cmd.encode(errors="namereplace"), log_file, cargs)
         else:
             print("    CMD: %s" % cmd)
 
