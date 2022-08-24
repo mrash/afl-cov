@@ -36,6 +36,7 @@ import signal
 import sys
 import time
 from shutil import rmtree
+from shutil import copyfile
 from sys import argv
 from tempfile import NamedTemporaryFile
 from typing import Any, Dict, Iterator, List, Union, Optional, Tuple
@@ -175,6 +176,14 @@ def process_afl_test_cases(cargs: argparse.Namespace) -> bool:
                 if f_ctr == len(new_files):
                     last_file = True
 
+
+                if cargs.afl_file:
+                    try:
+                        copyfile(f, cargs.afl_file)
+                    except Exception:
+                        print("[-] Cannot copy file")
+                        sys.exit(1)
+ 
                 if cargs.cover_corpus and last_dir and last_file:
                     # in --cover-corpus mode, only run lcov after all AFL
                     # test cases have been processed
@@ -1535,6 +1544,9 @@ def parse_cmdline() -> argparse.Namespace:
     )
     p.add_argument(
         "-T", "--timeout", type=str, help="timeout (default 5 seconds)", default="5"
+    )
+    p.add_argument(
+        "--afl-file", type=str, help="Filepath that is passed to AFL with -f argument", default=""
     )
 
     return p.parse_args()
