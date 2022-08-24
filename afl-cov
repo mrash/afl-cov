@@ -120,7 +120,7 @@ def process_afl_test_cases(cargs: argparse.Namespace) -> bool:
     tot_files = 0
     curr_cycle = -1
 
-    afl_files = []  # type: List[str]
+    afl_files = set()  # type: Set[str]
     cov_paths = {}  # type: CovPathsDictType
 
     # main coverage tracking dictionary
@@ -158,7 +158,7 @@ def process_afl_test_cases(cargs: argparse.Namespace) -> bool:
 
             for f in tmp_files:
                 if f not in afl_files:
-                    afl_files.append(f)
+                    afl_files.add(f)
                     new_files.append(f)
 
             if new_files:
