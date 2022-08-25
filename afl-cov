@@ -195,7 +195,7 @@ def process_afl_test_cases(cargs: argparse.Namespace) -> bool:
                 logr(
                     b"[+] AFL test case: %s (%d / %d), cycle: %d"
                     % (
-                        os.path.basename(f).encode(),
+                        os.path.basename(f).encode(errors="namereplace"),
                         num_files,
                         len(afl_files),
                         curr_cycle,
@@ -874,17 +874,17 @@ def run_cmd(
     else:
         fh = open(os.devnull, "wb")
 
+    if timeout:
+        cmd = "timeout -s KILL %s %s" % (timeout, cmd)
+
     if aflrun is True and len(fn) > 0:
         cmd = "cat " + fn + " | " + cmd
 
     if cargs.verbose:
         if log_file:
-            logr(b"    CMD: %s" % cmd.encode(), log_file, cargs)
+            logr(b"    CMD: %s" % cmd.encode(errors="namereplace"), log_file, cargs)
         else:
             print("    CMD: %s" % cmd)
-
-    if timeout:
-        cmd = "timeout -s KILL %s %s" % (timeout, cmd)
 
     exit_code = subprocess.call(
         cmd, stdin=None, stdout=fh, stderr=subprocess.STDOUT, shell=True
