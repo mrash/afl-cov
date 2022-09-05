@@ -10,8 +10,8 @@ while [ -n "$1" ]; do
   test -e "$1"/fuzzer_stats || { echo Error: not an afl-fuzz -o out directory ;  }
   echo File: `realpath "$1"`
   {
-    egrep 'run_time|execs_done|execs_per_sec|paths_total|^unique_|stability' "$1"/fuzzer_stats
-    SECONDS=`egrep run_time "$1"/fuzzer_stats | awk '{print$3}'`
+    grep -E 'run_time|execs_done|execs_per_sec|paths_total|^unique_|stability' "$1"/fuzzer_stats
+    SECONDS=`grep -E run_time "$1"/fuzzer_stats | awk '{print$3}'`
     test -n "$SECONDS" && {
       DAYS=`expr $SECONDS / 86400`
       SECONDS=`expr $SECONDS % 86400`

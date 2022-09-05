@@ -40,7 +40,7 @@ test -e "$1"/fuzzer_stats && {
   echo "runtime           : $DIFF seconds"
   TIME=`date -u -d "@$SECONDS" +"%T"`
   echo "run_clock         : $TIME"
-  egrep 'execs_done|paths_total|^unique_|stability' "$DST"/fuzzer_stats
+  grep -E 'execs_done|paths_total|^unique_|stability' "$DST"/fuzzer_stats
   LINES=
   test -e "$1"/cov/afl-cov.log && LINES=`grep -w lines "$1"/cov/afl-cov.log|tail -n 1|sed 's/.*(//'|sed 's/ .*//'`
   echo "coverage          : $LINES lines"
