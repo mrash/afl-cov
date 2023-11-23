@@ -1,3 +1,20 @@
+afl-cov-0.7.0
+   - python3 improvements by @domenukk - much faster now
+
+afl-cov-0.6.6
+   - support clang for gathering coverage
+
+afl-cov-0.6.5 (2020-05-28)
+   - switched to python3
+
+afl-cov-0.6.4 (2020-05-23):
+   - afl-cov now supports stdin targets (just omit @@/AFL_FILE)
+   - enhance scripts
+
+afl-cov-0.6.3 (2020-05-13):
+   - Allow @@ additionally to AFL_FILE
+   - added three helper scripts
+
 afl-cov-0.6.2 (12/26/2018):
     - (Tim Strazzere) Add support for llvm-cov compiled binaries. Add a check
       when ensuring the binary was instrumented with gcov to catch an llvm-cov

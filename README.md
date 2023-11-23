@@ -1,5 +1,8 @@
 # afl-cov - AFL Fuzzing Code Coverage
 
+Version: 0.7.0
+
+- [Preface](#preface)
 - [Introduction](#introduction)
 - [Prerequisites](#prerequisites)
 - [Workflow](#workflow)
@@ -10,9 +13,32 @@
 - [License](#license)
 - [Contact](#contact)
 
+## Preface
+
+This is a modified afl-cov fork because the original author's account is
+inactive :-(
+
+It has several improvements:
+ * Much, much faster (thanks to @domenukk)!
+ * afl-cov now accepts "@@" like AFL++ in the target command parameters
+ * afl-cov now can send to targets that read on stdin (just omit @@)
+ * afl-cov has a timeout -T option, so hangs are not an issue. default: 5s
+ * afl-cov.sh makes using afl-cov easier (just needs two parameters)
+ * afl-cov-build.sh makes builing a target for coverage easier, just type e.g.
+   `afl-cov-build.sh ./configure ; make`
+ * afl-cov/afl-cov.sh/afl-cov-build.sh now support clang coverage, just add
+   -c to afl-cov.sh/afl-cov-build.sh and --clang for afl-cov
+ * afl-stat.sh shows the statistics of a run (in progress or completed)
+ * For `LLVMFuzzerTestOneInput()` harnesses you can build + link with
+   `libfuzzer_driver.cpp`
+
+Enjoy!
+
+Marc "van Hauser" Heuse 
+
 ## Introduction
 `afl-cov` uses test case files produced by the
-[AFL fuzzer](http://lcamtuf.coredump.cx/afl/) `afl-fuzz` to generate gcov code
+[AFL++ fuzzer](http://github.com/AFLplusplus/aflplusplus) `afl-fuzz` to generate gcov code
 coverage results for a targeted binary. Code coverage is interpreted from one
 case to the next by `afl-cov` in order to determine which new functions and
 lines are hit by AFL with each new test case. Further, `afl-cov` allows for
@@ -82,32 +108,36 @@ the output directory used by `afl-fuzz`, and the command to execute along with
 associated arguments. This command and arguments should closely resemble the
 manner in which `afl-fuzz` executes the targeted binary during the fuzzing
 cycle. If there is already an existing directory of AFL fuzzing results, then
-just omit the `--live` argument to process the existing results. Here is an
-example:
+just omit the `--live` argument to process the existing results.
+
+NOTE: you can use both afl's "@@" or afl-cov's original "AFL_FILE" placeholder for
+the --coverage-cmd line parameter.
+
+Here is an example:
 
 ```bash
 $ cd /path/to/project-gcov/
 $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
-"cat AFL_FILE | LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -a -b -c" \
+"LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -a -b -c" \
 --code-dir .
 ```
 
 `/path/to/afl-fuzz-output/` is the output directory of afl-fuzz.
 
-The `AFL_FILE` string above refers to the test case file that AFL will
+The `AFL_FILE` string refers to the test case file that AFL will
 build in the `queue/` directory under `/path/to/afl-fuzz-output`. Just leave this
 string as-is since `afl-cov` will automatically substitute it with each AFL
 `queue/id:NNNNNN*` in succession as it builds the code coverage reports.
+You can also use @@ instead of AFL_FILE, both notations work.
 
 Also, in the above command, this handles the case where the AFL fuzzing cycle
-is fuzzing the targeted binary via stdin. This explains the
-`cat AFL_FILE | ... ./bin/.lib/somebin ...` invocation. For the other style of
-fuzzing with AFL where a file is read from the filesystem, here is an example:
+is fuzzing the targeted binary via stdin.
+For the other style of fuzzing with AFL where a file is read from the filesystem, here is an example:
 
 ```bash
 $ cd /path/to/project-gcov/
 $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
-"LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f AFL_FILE -a -b -c" \
+"LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f @@ -a -b -c" \
 --code-dir .
 ```
 
@@ -137,7 +167,7 @@ the `--enable-branch-coverage` argument as described above):
 
 ```bash
 $ afl-cov -d /path/to/afl-fuzz-output/ --live --coverage-cmd \
-"LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f AFL_FILE -a -b -c" \
+"LD_LIBRARY_PATH=./lib/.libs ./bin/.libs/somebin -f @@ -a -b -c" \
 --code-dir . --enable-branch-coverage
 [+] Imported 184 files from: /path/to/afl-fuzz-output/queue
 [+] AFL file: id:000000,orig:somestr.start (1 / 184), cycle: 0
