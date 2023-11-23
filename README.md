@@ -29,6 +29,8 @@ It has several improvements:
  * afl-cov/afl-cov.sh/afl-cov-build.sh now support clang coverage, just add
    -c to afl-cov.sh/afl-cov-build.sh and --clang for afl-cov
  * afl-stat.sh shows the statistics of a run (in progress or completed)
+ * For `LLVMFuzzerTestOneInput()` harnesses you can build + link with
+   `libfuzzer_driver.cpp`
 
 Enjoy!
 

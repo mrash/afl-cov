@@ -9,6 +9,8 @@ test -z "$1" -o "$1" = "-h" && {
   exit 1
 }
 
+echo " $CC $CXX" | grep -q afl && { echo Error: AFL++ compiler is set.; exit 1; }
+
 CLANG=
 test "$1" = "-c" && { CLANG=yes ; shift ; }
 
